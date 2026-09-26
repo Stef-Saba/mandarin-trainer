@@ -1,7 +1,6 @@
 import './style.css'
 
 document.querySelector('#app').innerHTML = `
-
   <main class="app">
 
     <section id="homeScreen">
@@ -38,7 +37,7 @@ document.querySelector('#app').innerHTML = `
         </button>
 
         <button class="category" data-category="pictograms">
-          <span class="category-title">🀄 Pictograms</span>
+          <span class="category-title">🀄 Hanzi</span>
           <span class="category-description">Learn Chinese characters through their origins</span>
         </button>
 
@@ -48,7 +47,6 @@ document.querySelector('#app').innerHTML = `
         </button>
 
       </div>
-
     </section>
 
     <section id="trainerScreen" style="display:none;">
@@ -68,6 +66,7 @@ document.querySelector('#app').innerHTML = `
           class="sound-button"
           type="button"
           aria-label="Listen"
+          style="display:none;"
         >
           🔊
         </button>
@@ -97,7 +96,6 @@ document.querySelector('#app').innerHTML = `
     </section>
 
   </main>
-
 `
 
 const homeScreen =
@@ -144,6 +142,18 @@ let currentPictogramIndex = 0
 
 let currentSpeechText = ''
 
+let speechGeneration = 0
+
+let loadGeneration = 0
+
+let chineseVoices = []
+
+let pictograms = []
+
+let pictogramsLoaded = false
+
+let pictogramsLoadingPromise = null
+
 const categoryNames = {
 
   beginner: '🌱 Beginner Mandarin',
@@ -156,7 +166,7 @@ const categoryNames = {
 
   conversation: '💬 Everyday Conversation',
 
-  pictograms: '🀄 Pictograms',
+  pictograms: '🀄 Hanzi',
 
   tones: '🎵 Tones & Pronunciation'
 
@@ -194,93 +204,16 @@ const categoryKeywords = {
 
 }
 
-const pictograms = [
+/* ------------------------------------------------------------------
+   HANZI / CHARACTER ARCHIVE
+------------------------------------------------------------------- */
 
-  {
-    character: '日',
-    pinyin: 'rì',
-    meaning: 'sun / day',
-    origin: 'An ancient drawing representing the sun.'
-  },
+const PICTOGRAM_DATA_URL =
+  'https://raw.githubusercontent.com/skishore/makemeahanzi/master/dictionary.txt'
 
-  {
-    character: '月',
-    pinyin: 'yuè',
-    meaning: 'moon / month',
-    origin: 'An ancient drawing representing the moon.'
-  },
-
-  {
-    character: '山',
-    pinyin: 'shān',
-    meaning: 'mountain',
-    origin: 'An ancient drawing representing mountain peaks.'
-  },
-
-  {
-    character: '水',
-    pinyin: 'shuǐ',
-    meaning: 'water',
-    origin: 'An ancient drawing representing flowing water.'
-  },
-
-  {
-    character: '火',
-    pinyin: 'huǒ',
-    meaning: 'fire',
-    origin: 'An ancient drawing representing flames.'
-  },
-
-  {
-    character: '木',
-    pinyin: 'mù',
-    meaning: 'tree / wood',
-    origin: 'An ancient drawing representing a tree.'
-  },
-
-  {
-    character: '人',
-    pinyin: 'rén',
-    meaning: 'person',
-    origin: 'An ancient drawing representing a person.'
-  },
-
-  {
-    character: '口',
-    pinyin: 'kǒu',
-    meaning: 'mouth',
-    origin: 'An ancient drawing representing a mouth.'
-  },
-
-  {
-    character: '目',
-    pinyin: 'mù',
-    meaning: 'eye',
-    origin: 'An ancient drawing representing an eye.'
-  },
-
-  {
-    character: '手',
-    pinyin: 'shǒu',
-    meaning: 'hand',
-    origin: 'An ancient drawing representing a hand.'
-  },
-
-  {
-    character: '耳',
-    pinyin: 'ěr',
-    meaning: 'ear',
-    origin: 'An ancient drawing representing an ear.'
-  },
-
-  {
-    character: '女',
-    pinyin: 'nǚ',
-    meaning: 'woman',
-    origin: 'An ancient drawing representing a woman.'
-  }
-
-]
+/* ------------------------------------------------------------------
+   PINYIN
+------------------------------------------------------------------- */
 
 const toneMarks = {
 
@@ -322,9 +255,20 @@ function addToneMarks(syllable, tone) {
 
   } else {
 
-    const vowels = ['a', 'e', 'i', 'o', 'u', 'ü']
+    const vowels = [
+      'a',
+      'e',
+      'i',
+      'o',
+      'u',
+      'ü'
+    ]
 
-    for (let i = lower.length - 1; i >= 0; i--) {
+    for (
+      let i = lower.length - 1;
+      i >= 0;
+      i--
+    ) {
 
       if (vowels.includes(lower[i])) {
 
@@ -368,7 +312,10 @@ function convertPinyin(pinyin) {
   return pinyin.replace(
     /([A-Za-züÜ]+)([1-5])/g,
     (_, syllable, tone) =>
-      addToneMarks(syllable, Number(tone))
+      addToneMarks(
+        syllable,
+        Number(tone)
+      )
   )
 
 }
@@ -380,14 +327,20 @@ function extractEnglish(sentence) {
 
   for (const group of translations) {
 
-    const items = Array.isArray(group)
-      ? group
-      : [group]
+    const items =
+      Array.isArray(group)
+        ? group
+        : [group]
 
     for (const item of items) {
 
-      if (item.lang === 'eng' && item.text) {
+      if (
+        item.lang === 'eng' &&
+        item.text
+      ) {
+
         return item.text
+
       }
 
     }
@@ -409,7 +362,11 @@ function extractPinyin(sentence) {
       continue
     }
 
-    if (!/[\u3400-\u9FFF]/.test(transcription.text)) {
+    if (
+      !/[\u3400-\u9FFF]/.test(
+        transcription.text
+      )
+    ) {
 
       return convertPinyin(
         transcription.text
@@ -423,43 +380,85 @@ function extractPinyin(sentence) {
 
 }
 
-function splitChinese(sentence) {
+/* ------------------------------------------------------------------
+   SPEECH
+------------------------------------------------------------------- */
 
-  if (
-    typeof Intl === 'undefined' ||
-    !Intl.Segmenter
-  ) {
-    return [...sentence]
+function refreshChineseVoices() {
+
+  if (!('speechSynthesis' in window)) {
+
+    chineseVoices = []
+
+    return
+
   }
 
-  const segmenter =
-    new Intl.Segmenter(
-      'zh',
-      { granularity: 'word' }
-    )
+  const voices =
+    window.speechSynthesis.getVoices()
 
-  return [...segmenter.segment(sentence)]
-    .map(item => item.segment)
-    .filter(Boolean)
+  chineseVoices =
+    voices.filter(
+      voice =>
+        voice.lang &&
+        voice.lang
+          .toLowerCase()
+          .startsWith('zh')
+    )
 
 }
 
-function getChineseVoice(synth) {
+if ('speechSynthesis' in window) {
 
-  const voices = synth.getVoices()
+  refreshChineseVoices()
+
+  window.speechSynthesis.addEventListener(
+    'voiceschanged',
+    refreshChineseVoices
+  )
+
+}
+
+function getBestChineseVoice() {
+
+  refreshChineseVoices()
+
+  if (!chineseVoices.length) {
+    return null
+  }
 
   return (
-    voices.find(
-      voice => voice.lang === 'zh-TW'
+
+    chineseVoices.find(
+      voice =>
+        voice.lang
+          .toLowerCase() ===
+        'zh-tw'
     ) ||
 
-    voices.find(
-      voice => voice.lang.startsWith('zh-TW')
+    chineseVoices.find(
+      voice =>
+        voice.lang
+          .toLowerCase()
+          .startsWith('zh-tw')
     ) ||
 
-    voices.find(
-      voice => voice.lang.startsWith('zh')
-    )
+    chineseVoices.find(
+      voice =>
+        voice.lang
+          .toLowerCase() ===
+        'zh-cn'
+    ) ||
+
+    chineseVoices.find(
+      voice =>
+        voice.lang
+          .toLowerCase()
+          .startsWith('zh-cn')
+    ) ||
+
+    chineseVoices[0]
+
   )
 
 }
@@ -470,34 +469,46 @@ function speakChinese(text) {
     !text ||
     !('speechSynthesis' in window)
   ) {
+
     return
+
   }
 
   const synth =
     window.speechSynthesis
 
+  const requestGeneration =
+    speechGeneration
+
   synth.cancel()
 
-  const speak = () => {
+  const attemptSpeech = () => {
 
-    const chineseVoice =
-      getChineseVoice(synth)
+    if (
+      requestGeneration !==
+      speechGeneration
+    ) {
+
+      return
+
+    }
+
+    const voice =
+      getBestChineseVoice()
 
     const utterance =
       new SpeechSynthesisUtterance(text)
 
-    if (chineseVoice) {
+    if (voice) {
 
-      utterance.voice =
-        chineseVoice
+      utterance.voice = voice
 
       utterance.lang =
-        chineseVoice.lang
+        voice.lang
 
     } else {
 
-      utterance.lang =
-        'zh-TW'
+      utterance.lang = 'zh-TW'
 
     }
 
@@ -505,28 +516,260 @@ function speakChinese(text) {
 
     utterance.pitch = 1
 
+    utterance.onstart = () => {
+
+      if (
+        requestGeneration !==
+        speechGeneration
+      ) {
+
+        synth.cancel()
+
+      }
+
+    }
+
+    utterance.onerror = event => {
+
+      console.warn(
+        'Chinese speech failed:',
+        event.error,
+        text
+      )
+
+    }
+
     synth.speak(utterance)
 
   }
 
   if (synth.getVoices().length) {
 
-    speak()
+    attemptSpeech()
 
   } else {
 
-    synth.onvoiceschanged = speak
+    setTimeout(
+      attemptSpeech,
+      150
+    )
 
   }
 
 }
 
+/* ------------------------------------------------------------------
+   HANZI / CHARACTER ARCHIVE
+------------------------------------------------------------------- */
+
+function parsePictogramData(text) {
+
+  const results = []
+
+  const lines =
+    text.split(/\r?\n/)
+
+  for (const line of lines) {
+
+    if (!line.trim()) {
+      continue
+    }
+
+    try {
+
+      const data =
+        JSON.parse(line)
+
+      if (
+        !data.character ||
+        !data.etymology ||
+        data.etymology.type !==
+          'pictographic'
+      ) {
+
+        continue
+
+      }
+
+      if (
+        [...data.character].length !== 1 ||
+        !/[\u3400-\u9FFF]/.test(
+          data.character
+        )
+      ) {
+
+        continue
+
+      }
+
+      const pinyin =
+        Array.isArray(data.pinyin)
+          ? data.pinyin[0] || ''
+          : data.pinyin || ''
+
+      const definition =
+        data.definition ||
+        'Chinese character'
+
+      let origin =
+        data.etymology.hint ||
+        data.etymology.semantic ||
+        ''
+
+      if (!origin) {
+
+        origin =
+          'An ancient pictographic form representing its original meaning.'
+
+      }
+
+      results.push({
+
+        character:
+          data.character,
+
+        pinyin:
+          convertPinyin(pinyin),
+
+        meaning:
+          definition,
+
+        origin
+
+      })
+
+    } catch (error) {
+
+      // Ignore malformed records.
+
+    }
+
+  }
+
+  const unique =
+    new Map()
+
+  for (const item of results) {
+
+    if (!unique.has(item.character)) {
+
+      unique.set(
+        item.character,
+        item
+      )
+
+    }
+
+  }
+
+  return [
+    ...unique.values()
+  ]
+
+}
+
+async function loadPictograms() {
+
+  if (pictogramsLoaded) {
+    return pictograms
+  }
+
+  if (pictogramsLoadingPromise) {
+    return pictogramsLoadingPromise
+  }
+
+  pictogramsLoadingPromise =
+    fetch(PICTOGRAM_DATA_URL)
+
+      .then(response => {
+
+        if (!response.ok) {
+
+          throw new Error(
+            `Character archive request failed: ${response.status}`
+          )
+
+        }
+
+        return response.text()
+
+      })
+
+      .then(text => {
+
+        const candidates =
+          parsePictogramData(text)
+
+        if (!candidates.length) {
+
+          throw new Error(
+            'No pictographic characters were found.'
+          )
+
+        }
+
+        /*
+         * Hanzi comes directly from the
+         * character-origin archive.
+         *
+         * We deliberately do NOT verify every
+         * character against the Taiwan Mandarin API.
+         */
+
+        pictograms =
+          candidates
+
+        pictogramsLoaded =
+          true
+
+        console.log(
+          `Hanzi library: ${pictograms.length} characters`
+        )
+
+        return pictograms
+
+      })
+
+      .catch(error => {
+
+        console.error(
+          'Could not load Hanzi library:',
+          error
+        )
+
+        pictogramsLoadingPromise =
+          null
+
+        throw error
+
+      })
+
+  return pictogramsLoadingPromise
+
+}
+
+/* ------------------------------------------------------------------
+   SENTENCE DISPLAY
+------------------------------------------------------------------- */
+
 function renderClickableSentence(sentence) {
 
   sentenceElement.innerHTML = ''
 
-  const words =
-    splitChinese(sentence)
+  const segmenter =
+    typeof Intl !== 'undefined' &&
+    Intl.Segmenter
+      ? new Intl.Segmenter(
+          'zh',
+          { granularity: 'word' }
+        )
+      : null
+
+  const words = segmenter
+    ? [...segmenter.segment(sentence)]
+        .map(item => item.segment)
+        .filter(Boolean)
+    : [...sentence]
 
   for (const word of words) {
 
@@ -534,51 +777,145 @@ function renderClickableSentence(sentence) {
       /[\u3400-\u9FFF]/.test(word)
 
     const isPunctuation =
-      /^[，。！？、,.!?；：:（）()「」“”‘’]+$/.test(word)
+      /^[，。！？、,.!?；：:（）()「」“”‘’]+$/.test(
+        word
+      )
 
-    if (!isChinese || isPunctuation) {
+    if (
+      !isChinese ||
+      isPunctuation
+    ) {
 
       const span =
         document.createElement('span')
 
       span.textContent = word
 
-      sentenceElement.appendChild(span)
+      sentenceElement.appendChild(
+        span
+      )
 
       continue
 
     }
 
-    const button =
-      document.createElement('button')
+    const wordSpan =
+      document.createElement('span')
 
-    button.className = 'word'
+    wordSpan.className =
+      'word'
 
-    button.textContent = word
+    wordSpan.textContent =
+      word
 
-    button.addEventListener(
+    wordSpan.addEventListener(
       'click',
-      () => lookupWord(word)
+      async () => {
+
+        /*
+         * A single character may have a
+         * pictographic origin.
+         *
+         * Load the Hanzi archive only when
+         * needed, then look for the character.
+         */
+
+        if ([...word].length === 1) {
+
+          try {
+
+            await loadPictograms()
+
+            const pictogram =
+              pictograms.find(
+                item =>
+                  item.character === word
+              )
+
+            if (pictogram) {
+
+              showPictogramDefinition(
+                pictogram
+              )
+
+              return
+
+            }
+
+          } catch (error) {
+
+            console.warn(
+              'Could not load Hanzi library for character:',
+              error
+            )
+
+          }
+
+        }
+
+        /*
+         * If it isn't a pictographic Hanzi,
+         * or it is a multi-character word,
+         * use the normal dictionary.
+         */
+
+        lookupWord(word)
+
+      }
     )
 
-    // Only a SINGLE character gets pronunciation
-    // when hovered. Multi-character words do not.
-    if ([...word].length === 1) {
-
-      button.addEventListener(
-        'mouseenter',
-        () => speakChinese(word)
-      )
-
-    }
-
-    sentenceElement.appendChild(button)
+    sentenceElement.appendChild(
+      wordSpan
+    )
 
   }
 
 }
 
-async function convertToTaiwanTraditional(word) {
+function showPictogramDefinition(
+  pictogram
+) {
+
+  stopAudio()
+
+  currentSpeechText =
+    pictogram.character
+
+  wordDefinition.innerHTML =
+    ''
+
+  pinyinElement.textContent =
+    pictogram.pinyin ||
+    'Pinyin not available'
+
+  translationElement.textContent =
+    pictogram.meaning ||
+    'Meaning not available'
+
+  pictogramExplanation.innerHTML = `
+    <div class="pictogram-origin">
+      ${pictogram.origin}
+    </div>
+  `
+
+  pinyinElement.style.display =
+    'block'
+
+  translationElement.style.display =
+    'block'
+
+  soundButton.style.display =
+    'inline-block'
+
+}
+
+/* ------------------------------------------------------------------
+   DICTIONARY
+------------------------------------------------------------------- */
+
+async function convertToTaiwanTraditional(
+  word
+) {
 
   const url =
     'https://api.zhconvert.org/convert' +
@@ -623,17 +960,17 @@ async function fetchDictionaryEntry(
   const url =
     `https://api.taiwanmandarin.com/${endpoint}/${encodeURIComponent(value)}`
 
-  console.log(
-    `Dictionary request: ${url}`
-  )
-
   const response =
     await fetch(url)
 
+  if (response.status === 404) {
+    return null
+  }
+
   if (!response.ok) {
 
-    console.log(
-      `Dictionary returned ${response.status} for ${value}`
+    console.warn(
+      `Dictionary request failed: ${response.status} for ${value}`
     )
 
     return null
@@ -655,6 +992,12 @@ async function lookupWord(word) {
 
   wordDefinition.innerHTML =
     '<div class="definition-loading">Looking up...</div>'
+
+  soundButton.style.display =
+    'none'
+
+  currentSpeechText =
+    ''
 
   try {
 
@@ -681,12 +1024,23 @@ async function lookupWord(word) {
 
     }
 
+    /*
+     * Tatoeba uses Mandarin Chinese
+     * sentences, while the Taiwan Mandarin
+     * dictionary uses Traditional Chinese.
+     *
+     * Try the original form first.
+     * Only convert when necessary.
+     */
+
     let traditional = word
 
     try {
 
       traditional =
-        await convertToTaiwanTraditional(word)
+        await convertToTaiwanTraditional(
+          word
+        )
 
     } catch (conversionError) {
 
@@ -712,6 +1066,29 @@ async function lookupWord(word) {
 
       if (data) {
 
+        if (
+          [...traditional].length === 1
+        ) {
+
+          const pictogram =
+            pictograms.find(
+              item =>
+                item.character ===
+                traditional
+            )
+
+          if (pictogram) {
+
+            showPictogramDefinition(
+              pictogram
+            )
+
+            return
+
+          }
+
+        }
+
         showWordDefinition(
           data,
           word,
@@ -724,7 +1101,9 @@ async function lookupWord(word) {
 
     }
 
-    if ([...traditional].length > 1) {
+    if (
+      [...traditional].length > 1
+    ) {
 
       await lookupCharacters(
         traditional,
@@ -747,14 +1126,10 @@ async function lookupWord(word) {
     )
 
     wordDefinition.innerHTML = `
-
       <div class="definition-empty">
-
         No definition found for
         <strong>${word}</strong>.
-
       </div>
-
     `
 
   }
@@ -768,10 +1143,18 @@ async function lookupCharacters(
 
   const results = []
 
-  for (const character of traditionalWord) {
+  for (
+    const character of traditionalWord
+  ) {
 
-    if (!/[\u3400-\u9FFF]/.test(character)) {
+    if (
+      !/[\u3400-\u9FFF]/.test(
+        character
+      )
+    ) {
+
       continue
+
     }
 
     try {
@@ -800,14 +1183,10 @@ async function lookupCharacters(
   if (!results.length) {
 
     wordDefinition.innerHTML = `
-
       <div class="definition-empty">
-
         No definition found for
         <strong>${originalWord}</strong>.
-
       </div>
-
     `
 
     return
@@ -815,7 +1194,6 @@ async function lookupCharacters(
   }
 
   wordDefinition.innerHTML = `
-
     <div class="definition-word">
       ${originalWord}
     </div>
@@ -834,50 +1212,30 @@ async function lookupCharacters(
       Individual characters
     </div>
 
-    ${results.map(data => `
+    ${
+      results
+        .map(
+          data => `
+            <div class="character-result">
 
-      <div class="character-result">
+              <span class="character-result-symbol">
+                ${data.char || ''}
+              </span>
 
-        <span class="character-result-symbol">
-          ${data.char || ''}
-        </span>
+              <span class="character-result-pinyin">
+                ${data.pinyin || ''}
+              </span>
 
-        <span class="character-result-pinyin">
-          ${data.pinyin || ''}
-        </span>
+              <span class="character-result-english">
+                ${data.english || ''}
+              </span>
 
-        <span class="character-result-english">
-          ${data.english || ''}
-        </span>
-
-        <button
-          class="character-sound"
-          type="button"
-          aria-label="Listen"
-          data-speech="${data.char || ''}"
-        >
-          🔊
-        </button>
-
-      </div>
-
-    `).join('')}
-
+            </div>
+          `
+        )
+        .join('')
+    }
   `
-
-  wordDefinition
-    .querySelectorAll('.character-sound')
-    .forEach(button => {
-
-      button.addEventListener(
-        'click',
-        () =>
-          speakChinese(
-            button.dataset.speech
-          )
-      )
-
-    })
 
 }
 
@@ -897,7 +1255,6 @@ function showWordDefinition(
     data.tocfl_level_name || ''
 
   wordDefinition.innerHTML = `
-
     <div class="definition-word">
       ${originalWord}
     </div>
@@ -941,36 +1298,20 @@ function showWordDefinition(
         `
         : ''
     }
-
-    <button
-      class="definition-sound"
-      type="button"
-    >
-      🔊 Listen
-    </button>
-
   `
-
-  const definitionSound =
-    wordDefinition.querySelector(
-      '.definition-sound'
-    )
-
-  definitionSound.addEventListener(
-    'click',
-    () =>
-      speakChinese(
-        traditionalWord
-      )
-  )
 
 }
 
 function clearWordDefinition() {
 
-  wordDefinition.innerHTML = ''
+  wordDefinition.innerHTML =
+    ''
 
 }
+
+/* ------------------------------------------------------------------
+   SENTENCE / HANZI DISPLAY
+------------------------------------------------------------------- */
 
 function showSentence(
   sentence,
@@ -978,12 +1319,18 @@ function showSentence(
   translation
 ) {
 
-  renderClickableSentence(sentence)
+  stopAudio()
 
-  currentSpeechText = ''
+  renderClickableSentence(
+    sentence
+  )
+
+  currentSpeechText =
+    ''
 
   pinyinElement.textContent =
-    pinyin || 'Pinyin not available'
+    pinyin ||
+    'Pinyin not available'
 
   translationElement.textContent =
     translation ||
@@ -995,46 +1342,66 @@ function showSentence(
   translationElement.style.display =
     'none'
 
-  pictogramExplanation.innerHTML = ''
+  pictogramExplanation.innerHTML =
+    ''
 
   clearWordDefinition()
 
-  // No sentence audio.
   soundButton.style.display =
     'none'
 
 }
 
-function showPictogram() {
+async function showPictogram() {
+
+  stopAudio()
+
+  if (!pictogramsLoaded) {
+
+    sentenceElement.textContent =
+      'Loading Hanzi...'
+
+    await loadPictograms()
+
+  }
+
+  if (!pictograms.length) {
+
+    throw new Error(
+      'No Hanzi characters available'
+    )
+
+  }
 
   const pictogram =
-    pictograms[currentPictogramIndex]
+    pictograms[
+      currentPictogramIndex
+    ]
 
   sentenceElement.innerHTML = `
-
     <div class="pictogram-character">
       ${pictogram.character}
     </div>
-
   `
 
   currentSpeechText =
     pictogram.character
 
-  wordDefinition.innerHTML = ''
+  wordDefinition.innerHTML =
+    ''
 
   pinyinElement.textContent =
-    pictogram.pinyin
+    pictogram.pinyin ||
+    'Pinyin not available'
 
   translationElement.textContent =
-    pictogram.meaning
+    pictogram.meaning ||
+    'Meaning not available'
 
   pictogramExplanation.innerHTML = `
-
     <div class="pictogram-origin">
       ${pictogram.origin}
     </div>
-
   `
 
   pinyinElement.style.display =
@@ -1047,6 +1414,10 @@ function showPictogram() {
     'inline-block'
 
 }
+
+/* ------------------------------------------------------------------
+   TATOEBA
+------------------------------------------------------------------- */
 
 async function fetchSentences(url) {
 
@@ -1068,7 +1439,9 @@ async function fetchSentences(url) {
 
 }
 
-function prepareCandidates(sentences) {
+function prepareCandidates(
+  sentences
+) {
 
   return sentences
 
@@ -1107,7 +1480,9 @@ function scoreTopicSentence(
   for (const keyword of keywords) {
 
     if (sentence.includes(keyword)) {
+
       score += keyword.length
+
     }
 
   }
@@ -1129,7 +1504,8 @@ async function findTopicSentence(
     )
 
   for (
-    const keyword of shuffled.slice(0, 6)
+    const keyword of
+    shuffled.slice(0, 6)
   ) {
 
     const url =
@@ -1144,7 +1520,9 @@ async function findTopicSentence(
       await fetchSentences(url)
 
     const candidates =
-      prepareCandidates(sentences)
+      prepareCandidates(
+        sentences
+      )
 
     const scored =
       candidates
@@ -1162,7 +1540,8 @@ async function findTopicSentence(
         }))
 
         .filter(
-          item => item.score > 0
+          item =>
+            item.score > 0
         )
 
         .sort(
@@ -1175,12 +1554,16 @@ async function findTopicSentence(
       const top =
         scored.slice(
           0,
-          Math.min(5, scored.length)
+          Math.min(
+            5,
+            scored.length
+          )
         )
 
       return top[
         Math.floor(
-          Math.random() * top.length
+          Math.random() *
+          top.length
         )
       ]
 
@@ -1208,10 +1591,14 @@ async function findBeginnerSentence() {
       '&include=transcriptions'
 
     const sentences =
-      await fetchSentences(url)
+      await fetchSentences(
+        url
+      )
 
     const candidates =
-      prepareCandidates(sentences)
+      prepareCandidates(
+        sentences
+      )
         .filter(item => {
 
           const length =
@@ -1246,7 +1633,16 @@ async function findBeginnerSentence() {
 
 }
 
+/* ------------------------------------------------------------------
+   TRAINER
+------------------------------------------------------------------- */
+
 async function getSentence() {
+
+  const requestId =
+    ++loadGeneration
+
+  stopAudio()
 
   sentenceElement.textContent =
     'Loading...'
@@ -1259,6 +1655,9 @@ async function getSentence() {
 
   clearWordDefinition()
 
+  pictogramExplanation.innerHTML =
+    ''
+
   soundButton.style.display =
     'none'
 
@@ -1266,22 +1665,45 @@ async function getSentence() {
 
     let result = null
 
-    if (currentCategory === 'beginner') {
+    if (
+      currentCategory ===
+      'beginner'
+    ) {
 
       result =
         await findBeginnerSentence()
 
     } else if (
-      currentCategory === 'pictograms'
+      currentCategory ===
+      'pictograms'
     ) {
 
-      showPictogram()
+      if (
+        requestId !==
+        loadGeneration
+      ) {
+
+        return
+
+      }
+
+      await showPictogram()
 
       return
 
     } else if (
-      currentCategory === 'tones'
+      currentCategory ===
+      'tones'
     ) {
+
+      if (
+        requestId !==
+        loadGeneration
+      ) {
+
+        return
+
+      }
 
       showSentence(
         '四声',
@@ -1297,6 +1719,15 @@ async function getSentence() {
         await findTopicSentence(
           currentCategory
         )
+
+    }
+
+    if (
+      requestId !==
+      loadGeneration
+    ) {
+
+      return
 
     }
 
@@ -1319,6 +1750,15 @@ async function getSentence() {
 
   } catch (error) {
 
+    if (
+      requestId !==
+      loadGeneration
+    ) {
+
+      return
+
+    }
+
     console.error(error)
 
     sentenceElement.textContent =
@@ -1330,7 +1770,14 @@ async function getSentence() {
 
 function stopAudio() {
 
-  if ('speechSynthesis' in window) {
+  speechGeneration++
+
+  currentSpeechText =
+    ''
+
+  if (
+    'speechSynthesis' in window
+  ) {
 
     window.speechSynthesis.cancel()
 
@@ -1338,7 +1785,13 @@ function stopAudio() {
 
 }
 
-function openCategory(category) {
+async function openCategory(
+  category
+) {
+
+  stopAudio()
+
+  loadGeneration++
 
   currentCategory =
     category
@@ -1346,19 +1799,48 @@ function openCategory(category) {
   lastSentenceId =
     null
 
-  stopAudio()
+  if (
+    category ===
+    'pictograms'
+  ) {
 
-  if (category === 'pictograms') {
+    try {
 
-    currentPictogramIndex =
-      Math.floor(
-        Math.random() *
-        pictograms.length
+      await loadPictograms()
+
+      currentPictogramIndex =
+        Math.floor(
+          Math.random() *
+          pictograms.length
+        )
+
+    } catch (error) {
+
+      console.error(
+        'Hanzi library failed to load:',
+        error
       )
+
+      categoryTitle.textContent =
+        categoryNames[category]
+
+      homeScreen.style.display =
+        'none'
+
+      trainerScreen.style.display =
+        'block'
+
+      sentenceElement.textContent =
+        'Could not load Hanzi.'
+
+      return
+
+    }
 
   } else {
 
-    currentPictogramIndex = 0
+    currentPictogramIndex =
+      0
 
   }
 
@@ -1371,10 +1853,13 @@ function openCategory(category) {
   trainerScreen.style.display =
     'block'
 
-  if (category === 'pictograms') {
+  if (
+    category ===
+    'pictograms'
+  ) {
 
     nextButton.textContent =
-      'Next pictogram'
+      'Next Hanzi'
 
   } else {
 
@@ -1386,6 +1871,10 @@ function openCategory(category) {
   getSentence()
 
 }
+
+/* ------------------------------------------------------------------
+   EVENTS
+------------------------------------------------------------------- */
 
 document
   .querySelectorAll('.category')
@@ -1412,6 +1901,8 @@ document
 
       stopAudio()
 
+      loadGeneration++
+
       trainerScreen.style.display =
         'none'
 
@@ -1425,7 +1916,7 @@ soundButton.addEventListener(
   'click',
   () => {
 
-    if (currentCategory === 'pictograms') {
+    if (currentSpeechText) {
 
       speakChinese(
         currentSpeechText
@@ -1458,20 +1949,28 @@ translationButton.addEventListener(
 
 nextButton.addEventListener(
   'click',
-  () => {
+  async () => {
+
+    stopAudio()
 
     if (
-      currentCategory === 'pictograms'
+      currentCategory ===
+      'pictograms'
     ) {
+
+      if (!pictograms.length) {
+        return
+      }
 
       currentPictogramIndex =
         (
           currentPictogramIndex + 1
-        ) % pictograms.length
+        ) %
+        pictograms.length
 
     }
 
-    getSentence()
+    await getSentence()
 
   }
 )
