@@ -13,65 +13,43 @@ document.querySelector('#app').innerHTML = `
       <div class="categories">
 
         <button class="category" data-category="beginner">
-
           <span class="category-title">🌱 Beginner Mandarin</span>
-
           <span class="category-description">Simple everyday sentences</span>
-
         </button>
 
         <button class="category" data-category="food">
-
           <span class="category-title">🍜 Food & Restaurants</span>
-
           <span class="category-description">Ordering, eating and food</span>
-
         </button>
 
         <button class="category" data-category="travel">
-
           <span class="category-title">✈️ Travel</span>
-
           <span class="category-description">Getting around and travelling</span>
-
         </button>
 
         <button class="category" data-category="business">
-
           <span class="category-title">💼 Business Chinese</span>
-
           <span class="category-description">Work and professional Mandarin</span>
-
         </button>
 
         <button class="category" data-category="conversation">
-
           <span class="category-title">💬 Everyday Conversation</span>
-
           <span class="category-description">Natural conversational Mandarin</span>
-
         </button>
 
         <button class="category" data-category="pictograms">
-
           <span class="category-title">🀄 Pictograms</span>
-
           <span class="category-description">Learn Chinese characters through their origins</span>
-
         </button>
 
         <button class="category" data-category="tones">
-
           <span class="category-title">🎵 Tones & Pronunciation</span>
-
           <span class="category-description">Learn Mandarin tones</span>
-
         </button>
 
       </div>
 
     </section>
-
 
     <section id="trainerScreen" style="display:none;">
 
@@ -110,9 +88,7 @@ document.querySelector('#app').innerHTML = `
     </section>
 
   </main>
-
 `
-
 
 const homeScreen =
   document.querySelector('#homeScreen')
@@ -147,13 +123,11 @@ const translationButton =
 const nextButton =
   document.querySelector('#nextButton')
 
-
 let currentCategory = ''
 
 let lastSentenceId = null
 
 let currentPictogramIndex = 0
-
 
 const categoryNames = {
 
@@ -172,7 +146,6 @@ const categoryNames = {
   tones: '🎵 Tones & Pronunciation'
 
 }
-
 
 const categoryKeywords = {
 
@@ -225,7 +198,6 @@ const categoryKeywords = {
   ]
 
 }
-
 
 const pictograms = [
 
@@ -315,7 +287,6 @@ const pictograms = [
 
 ]
 
-
 const toneMarks = {
 
   a: ['ā', 'á', 'ǎ', 'à'],
@@ -331,7 +302,6 @@ const toneMarks = {
   ü: ['ǖ', 'ǘ', 'ǚ', 'ǜ']
 
 }
-
 
 function addToneMarks(syllable, tone) {
 
@@ -387,17 +357,12 @@ function addToneMarks(syllable, tone) {
   }
 
   return (
-
     syllable.slice(0, vowelIndex) +
-
     markedVowel +
-
     syllable.slice(vowelIndex + 1)
-
   )
 
 }
-
 
 function convertPinyin(pinyin) {
 
@@ -406,16 +371,12 @@ function convertPinyin(pinyin) {
   }
 
   return pinyin.replace(
-
     /([A-Za-züÜ]+)([1-5])/g,
-
     (_, syllable, tone) =>
       addToneMarks(syllable, Number(tone))
-
   )
 
 }
-
 
 function extractEnglish(sentence) {
 
@@ -442,7 +403,6 @@ function extractEnglish(sentence) {
 
 }
 
-
 function extractPinyin(sentence) {
 
   const transcriptions =
@@ -468,7 +428,6 @@ function extractPinyin(sentence) {
 
 }
 
-
 function splitChinese(sentence) {
 
   if (
@@ -491,7 +450,6 @@ function splitChinese(sentence) {
     .filter(Boolean)
 
 }
-
 
 function renderClickableSentence(sentence) {
 
@@ -539,33 +497,23 @@ function renderClickableSentence(sentence) {
 
 }
 
-
 /* =====================================================
    DICTIONARY
-   =====================================================
 
-   The learner sees Simplified Chinese.
+   说说 teaches Traditional Chinese.
 
-   Tatoeba gives us Simplified Chinese.
+   Tatoeba currently supplies the sentence corpus.
+   For dictionary lookup we use Taiwan Mandarin.
 
-   The Taiwan Mandarin dictionary expects Traditional
-   Chinese, so we convert only internally before making
-   the dictionary request.
+   Lookup strategy:
 
-   Examples:
-
-   面条 → 麵條
-   还是 → 還是
-   吃饭 → 吃飯
-
-   IMPORTANT:
-
-   Single characters use /characters/:character
-
-   Words use /words/:word
+   1. Try the word/character exactly as displayed.
+   2. If it fails, convert it to Traditional.
+   3. Try the Traditional form.
+   4. If a multi-character word is unavailable,
+      look up its individual characters.
 
    ===================================================== */
-
 
 async function convertToTaiwanTraditional(word) {
 
@@ -604,6 +552,41 @@ async function convertToTaiwanTraditional(word) {
 
 }
 
+async function fetchDictionaryEntry(
+  endpoint,
+  value
+) {
+
+  const url =
+    `https://api.taiwanmandarin.com/${endpoint}/${encodeURIComponent(value)}`
+
+  console.log(
+    `Dictionary request: ${url}`
+  )
+
+  const response =
+    await fetch(url)
+
+  if (!response.ok) {
+
+    console.log(
+      `Dictionary returned ${response.status} for ${value}`
+    )
+
+    return null
+
+  }
+
+  const data =
+    await response.json()
+
+  if (!data) {
+    return null
+  }
+
+  return data
+
+}
 
 async function lookupWord(word) {
 
@@ -613,53 +596,72 @@ async function lookupWord(word) {
   try {
 
     /*
-      First convert the Simplified Chinese to
-      Traditional Chinese internally.
+      FIRST:
+      Try exactly what the user clicked.
 
-      The learner still sees the original
-      Simplified Chinese.
+      This is important because the learner-facing
+      app is now using Traditional Chinese.
     */
 
-    const traditional =
-      await convertToTaiwanTraditional(word)
+    const endpoint =
+      [...word].length === 1
+        ? 'characters'
+        : 'words'
 
-    console.log(
-      `Dictionary: ${word} → ${traditional}`
-    )
-
-
-    /*
-      SINGLE CHARACTER
-
-      Example:
-
-      过 → 過
-
-      Must use:
-
-      /characters/過
-
-      NOT:
-
-      /words/過
-    */
-
-    if (traditional.length === 1) {
-
-      const characterUrl =
-        `https://api.taiwanmandarin.com/characters/${encodeURIComponent(traditional)}`
-
-      console.log(
-        `Dictionary character request: ${characterUrl}`
+    let data =
+      await fetchDictionaryEntry(
+        endpoint,
+        word
       )
 
-      const response =
-        await fetch(characterUrl)
+    if (data) {
 
-      if (response.ok) {
+      showWordDefinition(
+        data,
+        word,
+        word
+      )
 
-        const data =
-          await response.json()
+      return
+
+    }
+
+    /*
+      SECOND:
+      If the exact lookup failed, convert to Taiwan
+      Traditional and try again.
+    */
+
+    let traditional = word
+
+    try {
+
+      traditional =
+        await convertToTaiwanTraditional(word)
+
+    } catch (conversionError) {
+
+      console.warn(
+        'Traditional conversion failed:',
+        conversionError
+      )
+
+    }
+
+    if (traditional !== word) {
+
+      const traditionalEndpoint =
+        [...traditional].length === 1
+          ? 'characters'
+          : 'words'
+
+      data =
+        await fetchDictionaryEntry(
+          traditionalEndpoint,
+          traditional
+        )
+
+      if (data) {
 
         showWordDefinition(
           data,
@@ -671,63 +673,27 @@ async function lookupWord(word) {
 
       }
 
-      throw new Error(
-        `No character entry for ${traditional}`
-      )
-
     }
 
-
     /*
-      MULTI-CHARACTER WORD
-
-      Example:
-
-      面条 → 麵條
-
-      Use:
-
-      /words/麵條
+      THIRD:
+      If a multi-character word doesn't exist,
+      show its individual character definitions.
     */
 
-    const wordUrl =
-      `https://api.taiwanmandarin.com/words/${encodeURIComponent(traditional)}`
+    if ([...traditional].length > 1) {
 
-    console.log(
-      `Dictionary word request: ${wordUrl}`
-    )
-
-    const response =
-      await fetch(wordUrl)
-
-
-    if (response.ok) {
-
-      const data =
-        await response.json()
-
-      showWordDefinition(
-        data,
-        word,
-        traditional
+      await lookupCharacters(
+        traditional,
+        word
       )
 
       return
 
     }
 
-
-    /*
-      The multi-character word isn't in the
-      dictionary.
-
-      Fall back to looking up each character
-      individually.
-    */
-
-    await lookupCharacters(
-      traditional,
-      word
+    throw new Error(
+      `No dictionary entry found for ${word}`
     )
 
   } catch (error) {
@@ -738,21 +704,15 @@ async function lookupWord(word) {
     )
 
     wordDefinition.innerHTML = `
-
       <div class="definition-empty">
-
         No definition found for
-
         <strong>${word}</strong>.
-
       </div>
-
     `
 
   }
 
 }
-
 
 async function lookupCharacters(
   traditionalWord,
@@ -769,67 +729,58 @@ async function lookupCharacters(
 
     try {
 
-      const url =
-        `https://api.taiwanmandarin.com/characters/${encodeURIComponent(character)}`
+      const data =
+        await fetchDictionaryEntry(
+          'characters',
+          character
+        )
 
-      const response =
-        await fetch(url)
-
-      if (!response.ok) {
-        continue
+      if (data) {
+        results.push(data)
       }
 
-      const data =
-        await response.json()
+    } catch (error) {
 
-      results.push(data)
-
-    } catch {
-
-      // Continue with the remaining characters.
+      console.warn(
+        `Could not look up ${character}:`,
+        error
+      )
 
     }
 
   }
 
-
   if (!results.length) {
 
     wordDefinition.innerHTML = `
-
       <div class="definition-empty">
-
         No definition found for
-
         <strong>${originalWord}</strong>.
-
       </div>
-
     `
 
     return
 
   }
 
-
   wordDefinition.innerHTML = `
 
     <div class="definition-word">
-
       ${originalWord}
-
     </div>
 
-    <div class="definition-traditional">
-
-      ${traditionalWord}
-
-    </div>
+    ${
+      traditionalWord !== originalWord
+        ? `
+          <div class="definition-traditional">
+            ${traditionalWord}
+          </div>
+        `
+        : ''
+    }
 
     <div class="character-hint">
-
       Individual characters
-
     </div>
 
     ${results.map(data => `
@@ -837,21 +788,15 @@ async function lookupCharacters(
       <div class="character-result">
 
         <span class="character-result-symbol">
-
           ${data.char || ''}
-
         </span>
 
         <span class="character-result-pinyin">
-
           ${data.pinyin || ''}
-
         </span>
 
         <span class="character-result-english">
-
           ${data.english || ''}
-
         </span>
 
       </div>
@@ -861,7 +806,6 @@ async function lookupCharacters(
   `
 
 }
-
 
 function showWordDefinition(
   data,
@@ -878,87 +822,55 @@ function showWordDefinition(
   const level =
     data.tocfl_level_name || ''
 
-
   wordDefinition.innerHTML = `
 
     <div class="definition-word">
-
       ${originalWord}
-
     </div>
 
     ${
       traditionalWord !== originalWord
-
         ? `
-
           <div class="definition-traditional">
-
             ${traditionalWord}
-
           </div>
-
         `
-
         : ''
-
     }
 
     ${
       pinyin
-
         ? `
-
           <div class="definition-pinyin">
-
             ${pinyin}
-
           </div>
-
         `
-
         : ''
-
     }
 
     ${
       english
-
         ? `
-
           <div class="definition-english">
-
             ${english}
-
           </div>
-
         `
-
         : ''
-
     }
 
     ${
       level
-
         ? `
-
           <div class="definition-level">
-
             ${level}
-
           </div>
-
         `
-
         : ''
-
     }
 
   `
 
 }
-
 
 function clearWordDefinition() {
 
@@ -966,11 +878,9 @@ function clearWordDefinition() {
 
 }
 
-
 /* =====================================================
    SENTENCES
    ===================================================== */
-
 
 function showSentence(
   sentence,
@@ -996,7 +906,6 @@ function showSentence(
 
 }
 
-
 function showPictogram() {
 
   const pictogram =
@@ -1005,9 +914,7 @@ function showPictogram() {
   sentenceElement.innerHTML = `
 
     <div class="pictogram-character">
-
       ${pictogram.character}
-
     </div>
 
   `
@@ -1023,9 +930,7 @@ function showPictogram() {
   pictogramExplanation.innerHTML = `
 
     <div class="pictogram-origin">
-
       ${pictogram.origin}
-
     </div>
 
   `
@@ -1035,7 +940,6 @@ function showPictogram() {
   translationElement.style.display = 'none'
 
 }
-
 
 async function fetchSentences(url) {
 
@@ -1057,7 +961,6 @@ async function fetchSentences(url) {
 
 }
 
-
 function prepareCandidates(sentences) {
 
   return sentences
@@ -1077,19 +980,14 @@ function prepareCandidates(sentences) {
     .filter(item => {
 
       return (
-
         item.pinyin &&
-
         item.translation &&
-
         item.sentence.id !== lastSentenceId
-
       )
 
     })
 
 }
-
 
 function scoreTopicSentence(
   sentence,
@@ -1101,9 +999,7 @@ function scoreTopicSentence(
   for (const keyword of keywords) {
 
     if (sentence.includes(keyword)) {
-
       score += keyword.length
-
     }
 
   }
@@ -1111,7 +1007,6 @@ function scoreTopicSentence(
   return score
 
 }
-
 
 async function findTopicSentence(category) {
 
@@ -1122,7 +1017,6 @@ async function findTopicSentence(category) {
     [...keywords].sort(
       () => Math.random() - 0.5
     )
-
 
   for (
     const keyword of shuffled.slice(0, 6)
@@ -1136,13 +1030,11 @@ async function findTopicSentence(category) {
       '&showtrans:lang=eng' +
       '&include=transcriptions'
 
-
     const sentences =
       await fetchSentences(url)
 
     const candidates =
       prepareCandidates(sentences)
-
 
     const scored =
       candidates
@@ -1166,7 +1058,6 @@ async function findTopicSentence(category) {
             b.score - a.score
         )
 
-
     if (scored.length) {
 
       const top =
@@ -1185,11 +1076,9 @@ async function findTopicSentence(category) {
 
   }
 
-
   return null
 
 }
-
 
 async function findBeginnerSentence() {
 
@@ -1206,10 +1095,8 @@ async function findBeginnerSentence() {
       '&showtrans:lang=eng' +
       '&include=transcriptions'
 
-
     const sentences =
       await fetchSentences(url)
-
 
     const candidates =
       prepareCandidates(sentences)
@@ -1231,7 +1118,6 @@ async function findBeginnerSentence() {
 
         })
 
-
     if (candidates.length) {
 
       return candidates[
@@ -1249,7 +1135,6 @@ async function findBeginnerSentence() {
 
 }
 
-
 async function getSentence() {
 
   sentenceElement.textContent =
@@ -1263,11 +1148,9 @@ async function getSentence() {
 
   clearWordDefinition()
 
-
   try {
 
     let result = null
-
 
     if (currentCategory === 'beginner') {
 
@@ -1303,7 +1186,6 @@ async function getSentence() {
 
     }
 
-
     if (!result) {
 
       throw new Error(
@@ -1312,17 +1194,14 @@ async function getSentence() {
 
     }
 
-
     lastSentenceId =
       result.sentence.id
-
 
     showSentence(
       result.sentence.text,
       result.pinyin,
       result.translation
     )
-
 
   } catch (error) {
 
@@ -1335,11 +1214,9 @@ async function getSentence() {
 
 }
 
-
 /* =====================================================
    NAVIGATION
    ===================================================== */
-
 
 function openCategory(category) {
 
@@ -1348,7 +1225,6 @@ function openCategory(category) {
 
   lastSentenceId =
     null
-
 
   if (category === 'pictograms') {
 
@@ -1365,17 +1241,14 @@ function openCategory(category) {
 
   }
 
-
   categoryTitle.textContent =
     categoryNames[category]
-
 
   homeScreen.style.display =
     'none'
 
   trainerScreen.style.display =
     'block'
-
 
   if (category === 'pictograms') {
 
@@ -1389,11 +1262,9 @@ function openCategory(category) {
 
   }
 
-
   getSentence()
 
 }
-
 
 document
   .querySelectorAll('.category')
@@ -1412,7 +1283,6 @@ document
 
   })
 
-
 document
   .querySelector('#backButton')
   .addEventListener(
@@ -1428,7 +1298,6 @@ document
     }
   )
 
-
 pinyinButton.addEventListener(
   'click',
   () => {
@@ -1439,7 +1308,6 @@ pinyinButton.addEventListener(
   }
 )
 
-
 translationButton.addEventListener(
   'click',
   () => {
@@ -1449,7 +1317,6 @@ translationButton.addEventListener(
 
   }
 )
-
 
 nextButton.addEventListener(
   'click',
