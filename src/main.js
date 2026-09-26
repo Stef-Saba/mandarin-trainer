@@ -63,6 +63,15 @@ document.querySelector('#app').innerHTML = `
           Loading...
         </div>
 
+        <button
+          id="soundButton"
+          class="sound-button"
+          type="button"
+          aria-label="Listen"
+        >
+          🔊
+        </button>
+
         <div id="wordDefinition" class="word-definition"></div>
 
         <div class="answer" id="pinyin"></div>
@@ -88,6 +97,7 @@ document.querySelector('#app').innerHTML = `
     </section>
 
   </main>
+
 `
 
 const homeScreen =
@@ -101,6 +111,9 @@ const categoryTitle =
 
 const sentenceElement =
   document.querySelector('#sentence')
+
+const soundButton =
+  document.querySelector('#soundButton')
 
 const wordDefinition =
   document.querySelector('#wordDefinition')
@@ -129,6 +142,8 @@ let lastSentenceId = null
 
 let currentPictogramIndex = 0
 
+let currentSpeechText = ''
+
 const categoryNames = {
 
   beginner: '🌱 Beginner Mandarin',
@@ -150,51 +165,31 @@ const categoryNames = {
 const categoryKeywords = {
 
   food: [
-
     '吃', '喝', '饭', '菜', '餐厅', '食物',
-
     '咖啡', '茶', '水', '面条', '米饭',
-
     '水果', '菜单', '点菜', '早餐',
-
     '午饭', '晚饭', '好吃'
-
   ],
 
   travel: [
-
     '旅行', '旅游', '机场', '飞机', '火车',
-
     '地铁', '公交', '车站', '酒店', '宾馆',
-
     '地图', '行李', '护照', '机票',
-
     '出发', '到达'
-
   ],
 
   business: [
-
     '工作', '公司', '老板', '经理', '会议',
-
     '办公室', '客户', '同事', '项目',
-
     '商务', '合同', '工资', '邮件',
-
     '报告', '市场'
-
   ],
 
   conversation: [
-
     '你好', '谢谢', '再见', '对不起',
-
     '喜欢', '觉得', '知道', '想',
-
     '可以', '需要', '为什么', '怎么样',
-
     '今天', '现在', '希望', '真的'
-
   ]
 
 }
@@ -434,9 +429,7 @@ function splitChinese(sentence) {
     typeof Intl === 'undefined' ||
     !Intl.Segmenter
   ) {
-
     return [...sentence]
-
   }
 
   const segmenter =
@@ -448,6 +441,83 @@ function splitChinese(sentence) {
   return [...segmenter.segment(sentence)]
     .map(item => item.segment)
     .filter(Boolean)
+
+}
+
+function getChineseVoice(synth) {
+
+  const voices = synth.getVoices()
+
+  return (
+    voices.find(
+      voice => voice.lang === 'zh-TW'
+    ) ||
+
+    voices.find(
+      voice => voice.lang.startsWith('zh-TW')
+    ) ||
+
+    voices.find(
+      voice => voice.lang.startsWith('zh')
+    )
+  )
+
+}
+
+function speakChinese(text) {
+
+  if (
+    !text ||
+    !('speechSynthesis' in window)
+  ) {
+    return
+  }
+
+  const synth =
+    window.speechSynthesis
+
+  synth.cancel()
+
+  const speak = () => {
+
+    const chineseVoice =
+      getChineseVoice(synth)
+
+    const utterance =
+      new SpeechSynthesisUtterance(text)
+
+    if (chineseVoice) {
+
+      utterance.voice =
+        chineseVoice
+
+      utterance.lang =
+        chineseVoice.lang
+
+    } else {
+
+      utterance.lang =
+        'zh-TW'
+
+    }
+
+    utterance.rate = 0.85
+
+    utterance.pitch = 1
+
+    synth.speak(utterance)
+
+  }
+
+  if (synth.getVoices().length) {
+
+    speak()
+
+  } else {
+
+    synth.onvoiceschanged = speak
+
+  }
 
 }
 
@@ -491,29 +561,22 @@ function renderClickableSentence(sentence) {
       () => lookupWord(word)
     )
 
+    // Only a SINGLE character gets pronunciation
+    // when hovered. Multi-character words do not.
+    if ([...word].length === 1) {
+
+      button.addEventListener(
+        'mouseenter',
+        () => speakChinese(word)
+      )
+
+    }
+
     sentenceElement.appendChild(button)
 
   }
 
 }
-
-/* =====================================================
-   DICTIONARY
-
-   说说 teaches Traditional Chinese.
-
-   Tatoeba currently supplies the sentence corpus.
-   For dictionary lookup we use Taiwan Mandarin.
-
-   Lookup strategy:
-
-   1. Try the word/character exactly as displayed.
-   2. If it fails, convert it to Traditional.
-   3. Try the Traditional form.
-   4. If a multi-character word is unavailable,
-      look up its individual characters.
-
-   ===================================================== */
 
 async function convertToTaiwanTraditional(word) {
 
@@ -595,14 +658,6 @@ async function lookupWord(word) {
 
   try {
 
-    /*
-      FIRST:
-      Try exactly what the user clicked.
-
-      This is important because the learner-facing
-      app is now using Traditional Chinese.
-    */
-
     const endpoint =
       [...word].length === 1
         ? 'characters'
@@ -625,12 +680,6 @@ async function lookupWord(word) {
       return
 
     }
-
-    /*
-      SECOND:
-      If the exact lookup failed, convert to Taiwan
-      Traditional and try again.
-    */
 
     let traditional = word
 
@@ -675,12 +724,6 @@ async function lookupWord(word) {
 
     }
 
-    /*
-      THIRD:
-      If a multi-character word doesn't exist,
-      show its individual character definitions.
-    */
-
     if ([...traditional].length > 1) {
 
       await lookupCharacters(
@@ -704,10 +747,14 @@ async function lookupWord(word) {
     )
 
     wordDefinition.innerHTML = `
+
       <div class="definition-empty">
+
         No definition found for
         <strong>${word}</strong>.
+
       </div>
+
     `
 
   }
@@ -753,10 +800,14 @@ async function lookupCharacters(
   if (!results.length) {
 
     wordDefinition.innerHTML = `
+
       <div class="definition-empty">
+
         No definition found for
         <strong>${originalWord}</strong>.
+
       </div>
+
     `
 
     return
@@ -799,11 +850,34 @@ async function lookupCharacters(
           ${data.english || ''}
         </span>
 
+        <button
+          class="character-sound"
+          type="button"
+          aria-label="Listen"
+          data-speech="${data.char || ''}"
+        >
+          🔊
+        </button>
+
       </div>
 
     `).join('')}
 
   `
+
+  wordDefinition
+    .querySelectorAll('.character-sound')
+    .forEach(button => {
+
+      button.addEventListener(
+        'click',
+        () =>
+          speakChinese(
+            button.dataset.speech
+          )
+      )
+
+    })
 
 }
 
@@ -868,7 +942,27 @@ function showWordDefinition(
         : ''
     }
 
+    <button
+      class="definition-sound"
+      type="button"
+    >
+      🔊 Listen
+    </button>
+
   `
+
+  const definitionSound =
+    wordDefinition.querySelector(
+      '.definition-sound'
+    )
+
+  definitionSound.addEventListener(
+    'click',
+    () =>
+      speakChinese(
+        traditionalWord
+      )
+  )
 
 }
 
@@ -878,10 +972,6 @@ function clearWordDefinition() {
 
 }
 
-/* =====================================================
-   SENTENCES
-   ===================================================== */
-
 function showSentence(
   sentence,
   pinyin,
@@ -890,19 +980,28 @@ function showSentence(
 
   renderClickableSentence(sentence)
 
+  currentSpeechText = ''
+
   pinyinElement.textContent =
     pinyin || 'Pinyin not available'
 
   translationElement.textContent =
-    translation || 'Translation not available'
+    translation ||
+    'Translation not available'
 
-  pinyinElement.style.display = 'none'
+  pinyinElement.style.display =
+    'none'
 
-  translationElement.style.display = 'none'
+  translationElement.style.display =
+    'none'
 
   pictogramExplanation.innerHTML = ''
 
   clearWordDefinition()
+
+  // No sentence audio.
+  soundButton.style.display =
+    'none'
 
 }
 
@@ -918,6 +1017,9 @@ function showPictogram() {
     </div>
 
   `
+
+  currentSpeechText =
+    pictogram.character
 
   wordDefinition.innerHTML = ''
 
@@ -935,9 +1037,14 @@ function showPictogram() {
 
   `
 
-  pinyinElement.style.display = 'none'
+  pinyinElement.style.display =
+    'none'
 
-  translationElement.style.display = 'none'
+  translationElement.style.display =
+    'none'
+
+  soundButton.style.display =
+    'inline-block'
 
 }
 
@@ -982,7 +1089,8 @@ function prepareCandidates(sentences) {
       return (
         item.pinyin &&
         item.translation &&
-        item.sentence.id !== lastSentenceId
+        item.sentence.id !==
+          lastSentenceId
       )
 
     })
@@ -1008,7 +1116,9 @@ function scoreTopicSentence(
 
 }
 
-async function findTopicSentence(category) {
+async function findTopicSentence(
+  category
+) {
 
   const keywords =
     categoryKeywords[category]
@@ -1051,7 +1161,9 @@ async function findTopicSentence(category) {
 
         }))
 
-        .filter(item => item.score > 0)
+        .filter(
+          item => item.score > 0
+        )
 
         .sort(
           (a, b) =>
@@ -1100,7 +1212,6 @@ async function findBeginnerSentence() {
 
     const candidates =
       prepareCandidates(sentences)
-
         .filter(item => {
 
           const length =
@@ -1147,6 +1258,9 @@ async function getSentence() {
     'none'
 
   clearWordDefinition()
+
+  soundButton.style.display =
+    'none'
 
   try {
 
@@ -1214,9 +1328,15 @@ async function getSentence() {
 
 }
 
-/* =====================================================
-   NAVIGATION
-   ===================================================== */
+function stopAudio() {
+
+  if ('speechSynthesis' in window) {
+
+    window.speechSynthesis.cancel()
+
+  }
+
+}
 
 function openCategory(category) {
 
@@ -1225,6 +1345,8 @@ function openCategory(category) {
 
   lastSentenceId =
     null
+
+  stopAudio()
 
   if (category === 'pictograms') {
 
@@ -1236,8 +1358,7 @@ function openCategory(category) {
 
   } else {
 
-    currentPictogramIndex =
-      0
+    currentPictogramIndex = 0
 
   }
 
@@ -1289,6 +1410,8 @@ document
     'click',
     () => {
 
+      stopAudio()
+
       trainerScreen.style.display =
         'none'
 
@@ -1297,6 +1420,21 @@ document
 
     }
   )
+
+soundButton.addEventListener(
+  'click',
+  () => {
+
+    if (currentCategory === 'pictograms') {
+
+      speakChinese(
+        currentSpeechText
+      )
+
+    }
+
+  }
+)
 
 pinyinButton.addEventListener(
   'click',
@@ -1322,7 +1460,9 @@ nextButton.addEventListener(
   'click',
   () => {
 
-    if (currentCategory === 'pictograms') {
+    if (
+      currentCategory === 'pictograms'
+    ) {
 
       currentPictogramIndex =
         (
