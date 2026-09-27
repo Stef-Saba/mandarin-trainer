@@ -15,7 +15,8 @@ import {
 import {
   openTonePractice,
   selectTone,
-  showNextTone
+  showNextTone,
+  toggleToneComparison
 } from './tones.js'
 
 import {
@@ -205,15 +206,30 @@ document.querySelector('#app').innerHTML = `
           Loading...
         </div>
 
-        <button
-          id="soundButton"
-          class="sound-button"
-          type="button"
-          aria-label="Listen"
-          style="display:none; margin:16px auto;"
-        >
-          🔊
-        </button>
+
+        <div class="tone-card-controls">
+
+          <button
+            id="soundButton"
+            class="sound-button"
+            type="button"
+            aria-label="Listen"
+            style="display:none;"
+          >
+            🔊
+          </button>
+
+          <button
+            id="compareTonesButton"
+            class="compare-tones-button"
+            type="button"
+            style="display:none;"
+          >
+            Compare tones
+          </button>
+
+        </div>
+
 
         <div
           class="answer"
@@ -221,16 +237,19 @@ document.querySelector('#app').innerHTML = `
           style="display:none;"
         ></div>
 
+
         <div
           class="answer"
           id="translation"
           style="display:none;"
         ></div>
 
+
         <div
           id="wordDefinition"
           class="word-definition"
         ></div>
+
 
         <div
           id="pictogramExplanation"
@@ -333,6 +352,11 @@ const sentenceElement =
 const soundButton =
   document.querySelector('#soundButton')
 
+const compareTonesButton =
+  document.querySelector(
+    '#compareTonesButton'
+  )
+
 const wordDefinition =
   document.querySelector('#wordDefinition')
 
@@ -414,6 +438,9 @@ function resetTrainerDisplay() {
   soundButton.style.display =
     'none'
 
+  compareTonesButton.style.display =
+    'none'
+
   nextButton.style.display =
     'block'
 
@@ -439,6 +466,7 @@ function showHome() {
     'none'
 
   currentCategory = ''
+
 }
 
 
@@ -454,6 +482,7 @@ function showSentenceFolder() {
 
   trainerScreen.style.display =
     'none'
+
 }
 
 
@@ -504,6 +533,9 @@ async function openCategory(category) {
     await loadHanzi()
 
     openTonePractice()
+
+    compareTonesButton.style.display =
+      'inline-block'
 
     return
   }
@@ -587,14 +619,6 @@ backButton.addEventListener(
 )
 
 
-/*
- * ONE shared sound handler.
- *
- * Hanzi, Tones and Sentences all use
- * the same button and speak whatever
- * is currently displayed in #sentence.
- */
-
 soundButton.onclick = () => {
 
   const text =
@@ -607,6 +631,16 @@ soundButton.onclick = () => {
   }
 
 }
+
+
+compareTonesButton.addEventListener(
+  'click',
+  () => {
+
+    toggleToneComparison()
+
+  }
+)
 
 
 pinyinButton.addEventListener(

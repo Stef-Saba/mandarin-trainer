@@ -140,7 +140,7 @@ h1 {
 
 
 /* =========================
-   SENTENCE / HANZI
+   CHARACTER / SENTENCE
    ========================= */
 
 .sentence {
@@ -149,12 +149,6 @@ h1 {
   margin-bottom: 20px;
   word-break: break-word;
 }
-
-
-/*
- * Hanzi characters are deliberately
- * much larger than normal sentences.
- */
 
 .hanzi-mode .sentence,
 .tones-mode .sentence {
@@ -305,16 +299,40 @@ h1 {
   font-size: 20px;
 }
 
-
-/*
- * Pinyin and translation now live
- * inside the card, so they don't look
- * detached from the character.
- */
-
 .hanzi-mode .answer,
 .tones-mode .answer {
   margin-top: 12px;
+}
+
+
+/* =========================
+   TONE CARD CONTROLS
+   ========================= */
+
+.tone-card-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin: 16px auto 0;
+}
+
+.tone-card-controls .sound-button,
+.tone-card-controls .compare-tones-button {
+  margin: 0;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: #222;
+  color: white;
+  font-family: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.tone-card-controls .sound-button:hover,
+.tone-card-controls .compare-tones-button:hover {
+  opacity: 0.85;
 }
 
 
@@ -369,15 +387,8 @@ h1 {
 
 
 /* =========================
-   TONE BUTTONS
+   TONE SELECTION
    ========================= */
-
-/*
- * These deliberately do NOT use .buttons.
- *
- * They sit below Next Hanzi and stay
- * compact in a single row.
- */
 
 .tone-buttons {
   display: flex;
@@ -404,6 +415,66 @@ h1 {
 
 .tone-buttons button:hover {
   opacity: 0.85;
+}
+
+
+/* =========================
+   TONE COMPARISON
+   ========================= */
+
+.tone-comparison {
+  display: grid;
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  width: 100%;
+  align-items: start;
+}
+
+.tone-comparison-item {
+  min-width: 0;
+  text-align: center;
+}
+
+.tone-comparison-label {
+  font-size: 11px;
+  color: #888;
+  margin-bottom: 8px;
+}
+
+.tone-comparison-character {
+  font-size: 52px;
+  line-height: 1.1;
+  margin-bottom: 6px;
+}
+
+.tone-comparison-pinyin {
+  font-size: 15px;
+  color: #555;
+  min-height: 21px;
+}
+
+.tone-comparison-meaning {
+  font-size: 12px;
+  line-height: 1.25;
+  color: #777;
+  min-height: 32px;
+  margin-top: 4px;
+  overflow-wrap: break-word;
+}
+
+.tone-comparison-sound {
+  margin-top: 7px;
+  padding: 4px 7px;
+  border: 0;
+  border-radius: 7px;
+  background: #f0eee9;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.tone-comparison-sound:hover {
+  background: #e5e2dc;
 }
 
 
@@ -437,20 +508,11 @@ h1 {
     padding: 35px 18px;
   }
 
-  /*
-   * Large Hanzi on the phone.
-   */
-
   .hanzi-mode .sentence,
   .tones-mode .sentence {
     font-size: 100px;
     line-height: 1.1;
   }
-
-  /*
-   * Pinyin / Translation controls
-   * remain full width.
-   */
 
   .buttons {
     flex-direction: column;
@@ -459,11 +521,6 @@ h1 {
   .buttons button {
     width: 100%;
   }
-
-  /*
-   * Tone controls are the exception:
-   * always one compact row.
-   */
 
   .tone-buttons {
     flex-direction: row;
@@ -475,6 +532,37 @@ h1 {
     min-width: 0;
     padding: 8px 4px;
     font-size: 12px;
+  }
+
+  .tone-card-controls {
+    gap: 8px;
+  }
+
+  .tone-card-controls .sound-button,
+  .tone-card-controls .compare-tones-button {
+    font-size: 13px;
+    padding: 8px 10px;
+  }
+
+  .tone-comparison {
+    gap: 3px;
+  }
+
+  .tone-comparison-character {
+    font-size: 43px;
+  }
+
+  .tone-comparison-pinyin {
+    font-size: 13px;
+  }
+
+  .tone-comparison-meaning {
+    font-size: 10px;
+    min-height: 30px;
+  }
+
+  .tone-comparison-label {
+    font-size: 10px;
   }
 
   .pictogram-character {
