@@ -644,7 +644,6 @@ soundButton.onclick = () => {
     'speechSynthesis' in window
   ) {
 
-    window.speechSynthesis.cancel()
 
     const utterance =
       new SpeechSynthesisUtterance(
