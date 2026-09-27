@@ -884,7 +884,7 @@ async function lookupWord(word) {
   )
 }
 
-export async function openSentence(
+export async function openSentencePractice(
   category
 ) {
   currentSentenceCategory =
@@ -1005,5 +1005,10 @@ async function loadSentence(
 export function showNextSentence(
   category
 ) {
-  loadSentence(category)
+
+  loadSentence(
+    category ||
+    currentSentenceCategory
+  )
+
 }
