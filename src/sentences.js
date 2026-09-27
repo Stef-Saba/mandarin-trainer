@@ -138,15 +138,14 @@ function buildTatoebaUrl(category) {
   const keywords =
     categoryKeywords[category] || []
 
-  const keyword =
-    keywords.length
-      ? keywords[
-          Math.floor(
-            Math.random() *
-            keywords.length
-          )
-        ]
-      : ''
+  const keyword = keywords.length
+    ? keywords[
+        Math.floor(
+          Math.random() *
+          keywords.length
+        )
+      ]
+    : ''
 
   const params =
     new URLSearchParams()
@@ -194,7 +193,6 @@ function extractEnglishTranslation(sentence) {
       for (const item of value) {
         collectEnglish(item)
       }
-
       return
     }
 
@@ -375,7 +373,6 @@ function extractPinyin(sentence) {
       for (const item of value) {
         collect(item)
       }
-
       return
     }
 
@@ -402,7 +399,7 @@ function extractPinyin(sentence) {
 
     for (
       const nested of
-        Object.values(value)
+      Object.values(value)
     ) {
       if (
         nested &&
@@ -720,7 +717,7 @@ function extractDictionaryPinyin(data) {
 
   for (
     const value of
-      Object.values(data)
+    Object.values(data)
   ) {
     if (
       value &&
@@ -815,7 +812,7 @@ async function lookupWord(word) {
 
     for (
       const character of
-        [...traditional]
+      [...traditional]
     ) {
       const characterResult =
         await fetchDictionaryEntry(
@@ -959,9 +956,6 @@ async function loadSentence(
       sentencePinyin ||
       'Pinyin not available'
 
-    pinyin.style.display =
-      'block'
-
     const english =
       extractEnglishTranslation(
         result
@@ -970,9 +964,6 @@ async function loadSentence(
     translation.textContent =
       english ||
       'Translation not available'
-
-    translation.style.display =
-      'block'
 
     document.dispatchEvent(
       new CustomEvent(
@@ -1005,10 +996,8 @@ async function loadSentence(
 export function showNextSentence(
   category
 ) {
-
   loadSentence(
     category ||
     currentSentenceCategory
   )
-
 }
