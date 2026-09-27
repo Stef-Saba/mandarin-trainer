@@ -3,6 +3,9 @@ import {
   loadHanzi
 } from './hanzi.js'
 
+import {
+  speakChinese
+} from './speech.js'
 
 let currentTone = null
 let toneItems = []
@@ -10,9 +13,7 @@ let currentIndex = 0
 let currentItem = null
 let comparisonVisible = false
 
-
 function getBasePinyin(pinyin) {
-
   if (!pinyin) {
     return ''
   }
@@ -23,12 +24,9 @@ function getBasePinyin(pinyin) {
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/[0-9]/g, '')
     .trim()
-
 }
 
-
 function getToneNumber(item) {
-
   if (item.tone) {
     return Number(item.tone)
   }
@@ -41,9 +39,7 @@ function getToneNumber(item) {
   }
 
   return null
-
 }
-
 
 /*
  * Common everyday Mandarin characters.
@@ -51,9 +47,7 @@ function getToneNumber(item) {
  * The comparison feature uses this list to avoid
  * showing obscure dictionary characters.
  */
-
 const commonCharacters = new Set(
-
   `
 我你他她它们的了不在有是人这那一个大中小上下来去
 好很也都和与要会能可以说看听吃喝做想知道觉得
@@ -101,14 +95,10 @@ const commonCharacters = new Set(
 语言中文英文
 学习生活
 `
-
-  .replace(/\s+/g, '')
-
+    .replace(/\s+/g, '')
 )
 
-
 function findToneVariants(item) {
-
   const basePinyin =
     getBasePinyin(item.pinyin)
 
@@ -120,7 +110,6 @@ function findToneVariants(item) {
   const variants = []
 
   for (const candidate of allHanzi) {
-
     if (
       getBasePinyin(candidate.pinyin) !==
       basePinyin
@@ -157,7 +146,6 @@ function findToneVariants(item) {
     if (!alreadyExists) {
       variants.push(candidate)
     }
-
   }
 
   variants.sort(
@@ -167,61 +155,34 @@ function findToneVariants(item) {
   )
 
   return variants
-
 }
 
-
 /*
- * Single speech function used by both:
- * - comparison buttons
- * - main Tone sound button
+ * Keep this export so anything else in the app
+ * that uses speakToneCharacter continues to work.
+ *
+ * It now uses the exact same speech function
+ * as the normal Hanzi audio.
  */
-
 export function speakToneCharacter(character) {
-
-  if (
-    !character ||
-    !('speechSynthesis' in window)
-  ) {
+  if (!character) {
     return
   }
 
-  const synth =
-    window.speechSynthesis
-
-  // Stop anything already queued or playing.
-  synth.cancel()
-
-  const utterance =
-    new SpeechSynthesisUtterance(
-      character
-    )
-
-  utterance.lang = 'zh-TW'
-  utterance.rate = 0.85
-  utterance.pitch = 1
-  utterance.volume = 1
-
-  synth.speak(utterance)
-
+  speakChinese(character)
 }
 
-
 export function playCurrentToneSound() {
-
   if (!currentItem) {
     return
   }
 
-  speakToneCharacter(
+  speakChinese(
     currentItem.character
   )
-
 }
 
-
 function renderComparison() {
-
   if (!currentItem) {
     return
   }
@@ -265,7 +226,6 @@ function renderComparison() {
     'tone-comparison'
 
   variants.forEach(item => {
-
     const column =
       document.createElement('div')
 
@@ -315,7 +275,6 @@ function renderComparison() {
       document.createElement('button')
 
     listen.type = 'button'
-
     listen.className =
       'tone-comparison-sound'
 
@@ -326,18 +285,18 @@ function renderComparison() {
       `Listen to ${item.character}`
     )
 
-    listen.addEventListener(
-      'click',
-      event => {
-
-        event.stopPropagation()
-
-        speakToneCharacter(
-          item.character
-        )
-
-      }
-    )
+    /*
+     * Use the same working speech function
+     * as the normal Hanzi audio.
+     *
+     * No speechSynthesis.cancel()
+     * and no separate speech implementation.
+     */
+    listen.onclick = () => {
+      speakChinese(
+        item.character
+      )
+    }
 
     column.appendChild(
       toneLabel
@@ -362,7 +321,6 @@ function renderComparison() {
     comparison.appendChild(
       column
     )
-
   })
 
   sentenceElement.appendChild(
@@ -379,16 +337,11 @@ function renderComparison() {
     'none'
 
   wordDefinition.textContent = ''
-
   pictogramExplanation.textContent = ''
-
 }
 
-
 function renderToneCharacter(item) {
-
   currentItem = item
-
   comparisonVisible = false
 
   const sentenceElement =
@@ -434,17 +387,13 @@ function renderToneCharacter(item) {
     'none'
 
   wordDefinition.textContent = ''
-
   pictogramExplanation.textContent = ''
 
   soundButton.style.display =
     'block'
-
 }
 
-
 export async function openTonePractice() {
-
   await loadHanzi()
 
   currentTone = null
@@ -504,11 +453,6 @@ export async function openTonePractice() {
     'tone-choose-prompt'
   )
 
-  /*
-   * Explicitly override the large Hanzi
-   * font on the initial Tone screen.
-   */
-
   sentenceElement.style.fontSize =
     '34px'
 
@@ -519,7 +463,6 @@ export async function openTonePractice() {
     'none'
 
   pinyinElement.textContent = ''
-
   translationElement.textContent = ''
 
   pinyinElement.style.display =
@@ -527,25 +470,21 @@ export async function openTonePractice() {
 
   translationElement.style.display =
     'none'
-
 }
 
-
 export function selectTone(tone) {
-
   const allHanzi =
     getHanzi()
 
   toneItems =
-    allHanzi.filter(item =>
-      Array.isArray(item.tones) &&
-      item.tones.includes(tone)
+    allHanzi.filter(
+      item =>
+        Array.isArray(item.tones) &&
+        item.tones.includes(tone)
     )
 
   currentTone = tone
-
   currentIndex = 0
-
   comparisonVisible = false
 
   if (!toneItems.length) {
@@ -555,12 +494,9 @@ export function selectTone(tone) {
   renderToneCharacter(
     toneItems[currentIndex]
   )
-
 }
 
-
 export function showNextTone() {
-
   if (!toneItems.length) {
     return
   }
@@ -572,12 +508,9 @@ export function showNextTone() {
   renderToneCharacter(
     toneItems[currentIndex]
   )
-
 }
 
-
 export function toggleToneComparison() {
-
   if (!currentItem) {
     return
   }
@@ -586,15 +519,10 @@ export function toggleToneComparison() {
     !comparisonVisible
 
   if (comparisonVisible) {
-
     renderComparison()
-
   } else {
-
     renderToneCharacter(
       currentItem
     )
-
   }
-
 }
