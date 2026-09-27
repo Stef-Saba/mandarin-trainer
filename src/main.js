@@ -217,20 +217,31 @@ document.querySelector('#app').innerHTML = `
         ></div>
 
         <div
-          class="answer"
-          id="pinyin"
-        ></div>
-
-        <div
-          class="answer"
-          id="translation"
-        ></div>
-
-        <div
           id="pictogramExplanation"
         ></div>
 
       </section>
+
+      <div
+        id="normalButtons"
+        class="buttons"
+      >
+
+        <button
+          id="pinyinButton"
+          type="button"
+        >
+          Pinyin
+        </button>
+
+        <button
+          id="translationButton"
+          type="button"
+        >
+          Translation
+        </button>
+
+      </div>
 
       <div
         id="toneSelection"
@@ -269,23 +280,19 @@ document.querySelector('#app').innerHTML = `
       </div>
 
       <div
-        id="normalButtons"
-        class="buttons"
+        id="hiddenAnswers"
+        style="display:none;"
       >
 
-        <button
-          id="pinyinButton"
-          type="button"
-        >
-          Pinyin
-        </button>
+        <div
+          class="answer"
+          id="pinyin"
+        ></div>
 
-        <button
-          id="translationButton"
-          type="button"
-        >
-          Translation
-        </button>
+        <div
+          class="answer"
+          id="translation"
+        ></div>
 
       </div>
 
@@ -306,7 +313,9 @@ const homeScreen =
   document.querySelector('#homeScreen')
 
 const sentenceFolderScreen =
-  document.querySelector('#sentenceFolderScreen')
+  document.querySelector(
+    '#sentenceFolderScreen'
+  )
 
 const trainerScreen =
   document.querySelector('#trainerScreen')
@@ -330,13 +339,17 @@ const translationElement =
   document.querySelector('#translation')
 
 const pictogramExplanation =
-  document.querySelector('#pictogramExplanation')
+  document.querySelector(
+    '#pictogramExplanation'
+  )
 
 const pinyinButton =
   document.querySelector('#pinyinButton')
 
 const translationButton =
-  document.querySelector('#translationButton')
+  document.querySelector(
+    '#translationButton'
+  )
 
 const nextButton =
   document.querySelector('#nextButton')
@@ -348,7 +361,9 @@ const normalButtons =
   document.querySelector('#normalButtons')
 
 const sentenceFolderBack =
-  document.querySelector('#sentenceFolderBack')
+  document.querySelector(
+    '#sentenceFolderBack'
+  )
 
 const backButton =
   document.querySelector('#backButton')
@@ -369,24 +384,36 @@ function resetTrainerDisplay() {
   translationElement.textContent = ''
   pictogramExplanation.textContent = ''
 
-  pinyinElement.style.display = 'none'
-  translationElement.style.display = 'none'
+  pinyinElement.style.display =
+    'none'
 
-  soundButton.style.display = 'none'
+  translationElement.style.display =
+    'none'
 
-  nextButton.style.display = 'block'
+  soundButton.style.display =
+    'none'
 
-  normalButtons.style.display = 'flex'
+  nextButton.style.display =
+    'block'
 
-  toneSelection.style.display = 'none'
+  normalButtons.style.display =
+    'flex'
+
+  toneSelection.style.display =
+    'none'
 }
 
 function showHome() {
   stopAudio()
 
-  homeScreen.style.display = 'block'
-  sentenceFolderScreen.style.display = 'none'
-  trainerScreen.style.display = 'none'
+  homeScreen.style.display =
+    'block'
+
+  sentenceFolderScreen.style.display =
+    'none'
+
+  trainerScreen.style.display =
+    'none'
 
   currentCategory = ''
 }
@@ -394,9 +421,14 @@ function showHome() {
 function showSentenceFolder() {
   stopAudio()
 
-  homeScreen.style.display = 'none'
-  sentenceFolderScreen.style.display = 'block'
-  trainerScreen.style.display = 'none'
+  homeScreen.style.display =
+    'none'
+
+  sentenceFolderScreen.style.display =
+    'block'
+
+  trainerScreen.style.display =
+    'none'
 }
 
 async function openCategory(category) {
@@ -407,9 +439,14 @@ async function openCategory(category) {
   categoryTitle.textContent =
     categoryNames[category]
 
-  homeScreen.style.display = 'none'
-  sentenceFolderScreen.style.display = 'none'
-  trainerScreen.style.display = 'block'
+  homeScreen.style.display =
+    'none'
+
+  sentenceFolderScreen.style.display =
+    'none'
+
+  trainerScreen.style.display =
+    'block'
 
   resetTrainerDisplay()
 
@@ -488,23 +525,9 @@ backButton.addEventListener(
   showHome
 )
 
-/*
- * IMPORTANT:
- * Use onclick instead of addEventListener here.
- *
- * If Vite/HMR or another part of the app
- * re-runs this module, assigning onclick replaces
- * the previous handler instead of stacking another
- * Sound-button listener.
- */
 soundButton.onclick = () => {
   const text =
     sentenceElement.textContent.trim()
-
-  console.log(
-    'SOUND BUTTON CLICK:',
-    text
-  )
 
   if (text) {
     speakChinese(text)

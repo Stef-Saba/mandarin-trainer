@@ -1,180 +1,195 @@
-import { getHanzi, loadHanzi } from './hanzi.js'
+import {
+  getHanzi,
+  loadHanzi
+} from './hanzi.js'
 
-let selectedTone = null
-let toneCharacters = []
-let currentToneIndex = 0
+import {
+  speakChinese
+} from './speech.js'
 
-function getCharacterElement() {
-  return document.getElementById('sentence')
-}
-
-function getPinyinElement() {
-  return document.getElementById('pinyin')
-}
-
-function getTranslationElement() {
-  return document.getElementById('translation')
-}
-
-function getDescriptionElement() {
-  return document.getElementById('pictogramExplanation')
-}
-
-function getSoundButton() {
-  return document.getElementById('soundButton')
-}
+let currentTone = null
+let toneItems = []
+let currentIndex = 0
 
 function renderToneCharacter(item) {
-  const characterElement = getCharacterElement()
-  const pinyinElement = getPinyinElement()
-  const translationElement = getTranslationElement()
-  const descriptionElement = getDescriptionElement()
-  const soundButton = getSoundButton()
+  const sentenceElement =
+    document.querySelector('#sentence')
 
-  if (characterElement) {
-    characterElement.textContent = item.character
-  }
+  const soundButton =
+    document.querySelector('#soundButton')
 
-  if (pinyinElement) {
-    pinyinElement.textContent =
-      item.pinyin || 'No pinyin available'
+  const pinyinElement =
+    document.querySelector('#pinyin')
 
-    pinyinElement.style.display = 'none'
-  }
+  const translationElement =
+    document.querySelector('#translation')
 
-  if (translationElement) {
-    translationElement.textContent =
-      item.meaning || 'No translation available'
+  const wordDefinition =
+    document.querySelector('#wordDefinition')
 
-    translationElement.style.display = 'none'
-  }
+  const pictogramExplanation =
+    document.querySelector(
+      '#pictogramExplanation'
+    )
 
-  if (descriptionElement) {
-    descriptionElement.textContent = ''
-    descriptionElement.style.display = 'none'
-  }
+  sentenceElement.textContent =
+    item.character
 
-  if (soundButton) {
-    soundButton.style.display = 'inline-flex'
-  }
+  pinyinElement.textContent =
+    item.pinyin || ''
+
+  translationElement.textContent =
+    item.meaning || ''
+
+  pinyinElement.style.display =
+    'none'
+
+  translationElement.style.display =
+    'none'
+
+  wordDefinition.textContent = ''
+
+  pictogramExplanation.textContent = ''
+
+  soundButton.style.display =
+    'block'
 
   /*
-   * Register the character with the existing
-   * speech system.
+   * Tones gets its own direct sound handler.
+   * This avoids relying on the shared handler
+   * in main.js for mobile Tones practice.
    */
-  document.dispatchEvent(
-    new CustomEvent('trainer:setSpeech', {
-      detail: {
-        text: item.character
-      }
-    })
-  )
-}
+  soundButton.onclick = event => {
+    event.preventDefault()
+    event.stopPropagation()
 
-function renderSelectedTone() {
-  if (!toneCharacters.length) {
-    const characterElement = getCharacterElement()
-    const pinyinElement = getPinyinElement()
-    const translationElement = getTranslationElement()
-    const descriptionElement = getDescriptionElement()
-    const soundButton = getSoundButton()
-
-    if (characterElement) {
-      characterElement.textContent =
-        'No Hanzi available'
-    }
-
-    if (pinyinElement) {
-      pinyinElement.textContent = ''
-      pinyinElement.style.display = 'none'
-    }
-
-    if (translationElement) {
-      translationElement.textContent = ''
-      translationElement.style.display = 'none'
-    }
-
-    if (descriptionElement) {
-      descriptionElement.textContent = ''
-      descriptionElement.style.display = 'none'
-    }
-
-    if (soundButton) {
-      soundButton.style.display = 'none'
-    }
-
-    return
+    speakChinese(item.character)
   }
 
-  renderToneCharacter(
-    toneCharacters[currentToneIndex]
+  window.dispatchEvent(
+    new CustomEvent(
+      'trainer:setSpeech',
+      {
+        detail: {
+          text: item.character
+        }
+      }
+    )
   )
 }
 
 export async function openTonePractice() {
   await loadHanzi()
 
+  const allHanzi =
+    getHanzi()
+
+  toneItems = []
+
+  currentTone = null
+  currentIndex = 0
+
   const toneSelection =
-    document.getElementById('toneSelection')
+    document.querySelector(
+      '#toneSelection'
+    )
 
   const normalButtons =
-    document.getElementById('normalButtons')
+    document.querySelector(
+      '#normalButtons'
+    )
+
+  toneSelection.style.display =
+    'flex'
+
+  normalButtons.style.display =
+    'flex'
 
   const nextButton =
-    document.getElementById('nextButton')
+    document.querySelector(
+      '#nextButton'
+    )
 
-  if (toneSelection) {
-    toneSelection.style.display = 'flex'
-  }
+  nextButton.textContent =
+    'Next Hanzi'
 
-  if (normalButtons) {
-    normalButtons.style.display = 'flex'
-  }
+  const sentenceElement =
+    document.querySelector(
+      '#sentence'
+    )
 
-  if (nextButton) {
-    nextButton.textContent = 'Next Hanzi'
-    nextButton.style.display = 'block'
-  }
+  const soundButton =
+    document.querySelector(
+      '#soundButton'
+    )
 
-  selectedTone = null
-  toneCharacters = []
-  currentToneIndex = 0
+  const pinyinElement =
+    document.querySelector(
+      '#pinyin'
+    )
 
-  const characterElement =
-    getCharacterElement()
+  const translationElement =
+    document.querySelector(
+      '#translation'
+    )
 
-  if (characterElement) {
-    characterElement.textContent =
-      'Choose a tone'
-  }
+  sentenceElement.textContent =
+    'Choose a tone'
+
+  soundButton.style.display =
+    'none'
+
+  pinyinElement.textContent = ''
+  translationElement.textContent = ''
+
+  pinyinElement.style.display =
+    'none'
+
+  translationElement.style.display =
+    'none'
+
+  allHanzi.forEach(item => {
+    if (
+      Array.isArray(item.tones) &&
+      item.tones.length > 0
+    ) {
+      toneItems.push(item)
+    }
+  })
 }
 
-export async function selectTone(tone) {
-  await loadHanzi()
+export function selectTone(tone) {
+  const allHanzi =
+    getHanzi()
 
-  selectedTone = tone
-
-  const hanzi = getHanzi()
-
-  toneCharacters = hanzi.filter(
-    item =>
+  toneItems =
+    allHanzi.filter(item =>
       Array.isArray(item.tones) &&
       item.tones.includes(tone)
-  )
+    )
 
-  currentToneIndex = 0
+  currentTone = tone
+  currentIndex = 0
 
-  renderSelectedTone()
-}
-
-export function showNextTone() {
-  if (!toneCharacters.length) {
+  if (!toneItems.length) {
     return
   }
 
-  currentToneIndex =
-    (currentToneIndex + 1) %
-    toneCharacters.length
+  renderToneCharacter(
+    toneItems[currentIndex]
+  )
+}
 
-  renderSelectedTone()
+export function showNextTone() {
+  if (!toneItems.length) {
+    return
+  }
+
+  currentIndex =
+    (currentIndex + 1) %
+    toneItems.length
+
+  renderToneCharacter(
+    toneItems[currentIndex]
+  )
 }
