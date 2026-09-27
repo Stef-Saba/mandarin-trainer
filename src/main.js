@@ -23,6 +23,7 @@ import {
   showNextSentence
 } from './sentences.js'
 
+
 document.querySelector('#app').innerHTML = `
 
   <main class="app">
@@ -79,6 +80,7 @@ document.querySelector('#app').innerHTML = `
       </div>
 
     </section>
+
 
     <section
       id="sentenceFolderScreen"
@@ -175,6 +177,7 @@ document.querySelector('#app').innerHTML = `
 
     </section>
 
+
     <section
       id="trainerScreen"
       style="display:none;"
@@ -191,6 +194,7 @@ document.querySelector('#app').innerHTML = `
       <h1 id="categoryTitle">
         说说
       </h1>
+
 
       <section class="card">
 
@@ -212,6 +216,18 @@ document.querySelector('#app').innerHTML = `
         </button>
 
         <div
+          class="answer"
+          id="pinyin"
+          style="display:none;"
+        ></div>
+
+        <div
+          class="answer"
+          id="translation"
+          style="display:none;"
+        ></div>
+
+        <div
           id="wordDefinition"
           class="word-definition"
         ></div>
@@ -222,17 +238,6 @@ document.querySelector('#app').innerHTML = `
 
       </section>
 
-      <div
-        class="answer"
-        id="pinyin"
-        style="display:none;"
-      ></div>
-
-      <div
-        class="answer"
-        id="translation"
-        style="display:none;"
-      ></div>
 
       <div
         id="normalButtons"
@@ -255,9 +260,19 @@ document.querySelector('#app').innerHTML = `
 
       </div>
 
+
+      <button
+        class="next"
+        id="nextButton"
+        type="button"
+      >
+        Next Hanzi
+      </button>
+
+
       <div
         id="toneSelection"
-        class="buttons"
+        class="tone-buttons"
         style="display:none;"
       >
 
@@ -291,18 +306,12 @@ document.querySelector('#app').innerHTML = `
 
       </div>
 
-      <button
-        class="next"
-        id="nextButton"
-        type="button"
-      >
-        Next Hanzi
-      </button>
-
     </section>
 
   </main>
+
 `
+
 
 const homeScreen =
   document.querySelector('#homeScreen')
@@ -363,20 +372,37 @@ const sentenceFolderBack =
 const backButton =
   document.querySelector('#backButton')
 
+
 let currentCategory = ''
 
 let currentSentenceCategory = ''
 
+
 const categoryNames = {
+
   pictograms: '🀄 Hanzi',
+
   tones: '🎵 Tones',
+
   sentence: '💬 Sentences'
+
 }
 
+
 function resetTrainerDisplay() {
+
+  trainerScreen.classList.remove(
+    'hanzi-mode',
+    'tones-mode',
+    'sentence-mode'
+  )
+
   wordDefinition.textContent = ''
+
   pinyinElement.textContent = ''
+
   translationElement.textContent = ''
+
   pictogramExplanation.textContent = ''
 
   pinyinElement.style.display =
@@ -398,7 +424,9 @@ function resetTrainerDisplay() {
     'none'
 }
 
+
 function showHome() {
+
   stopAudio()
 
   homeScreen.style.display =
@@ -413,7 +441,9 @@ function showHome() {
   currentCategory = ''
 }
 
+
 function showSentenceFolder() {
+
   stopAudio()
 
   homeScreen.style.display =
@@ -426,7 +456,9 @@ function showSentenceFolder() {
     'none'
 }
 
+
 async function openCategory(category) {
+
   stopAudio()
 
   currentCategory = category
@@ -445,7 +477,13 @@ async function openCategory(category) {
 
   resetTrainerDisplay()
 
+
   if (category === 'pictograms') {
+
+    trainerScreen.classList.add(
+      'hanzi-mode'
+    )
+
     await loadHanzi()
 
     nextButton.textContent =
@@ -456,7 +494,13 @@ async function openCategory(category) {
     return
   }
 
+
   if (category === 'tones') {
+
+    trainerScreen.classList.add(
+      'tones-mode'
+    )
+
     await loadHanzi()
 
     openTonePractice()
@@ -464,61 +508,84 @@ async function openCategory(category) {
     return
   }
 
+
   if (category === 'sentence') {
+
+    trainerScreen.classList.add(
+      'sentence-mode'
+    )
+
     await openSentence(
       currentSentenceCategory
     )
+
   }
+
 }
+
 
 document
   .querySelectorAll(
     '#homeScreen .category'
   )
   .forEach(button => {
+
     button.addEventListener(
       'click',
       () => {
+
         const category =
           button.dataset.category
 
         if (
           category === 'sentences'
         ) {
+
           showSentenceFolder()
+
           return
         }
 
         openCategory(category)
+
       }
     )
+
   })
+
 
 document
   .querySelectorAll(
     '.sentence-category'
   )
   .forEach(button => {
+
     button.addEventListener(
       'click',
       () => {
+
         currentSentenceCategory =
           button.dataset.sentenceCategory
 
         openCategory('sentence')
+
       }
     )
+
   })
+
 
 sentenceFolderBack.addEventListener(
   'click',
   showHome
 )
 
+
 backButton.addEventListener(
   'click',
   showHome
 )
+
 
 /*
  * ONE shared sound handler.
@@ -527,79 +594,107 @@ backButton.addEventListener(
  * the same button and speak whatever
  * is currently displayed in #sentence.
  */
+
 soundButton.onclick = () => {
+
   const text =
     sentenceElement.textContent.trim()
 
   if (text) {
+
     speakChinese(text)
+
   }
+
 }
+
 
 pinyinButton.addEventListener(
   'click',
   () => {
+
     pinyinElement.style.display =
       'block'
+
   }
 )
+
 
 translationButton.addEventListener(
   'click',
   () => {
+
     translationElement.style.display =
       'block'
+
   }
 )
+
 
 toneSelection
   .querySelectorAll(
     '[data-tone]'
   )
   .forEach(button => {
+
     button.addEventListener(
       'click',
       () => {
+
         selectTone(
           Number(
             button.dataset.tone
           )
         )
+
       }
     )
+
   })
+
 
 nextButton.addEventListener(
   'click',
   () => {
+
     stopAudio()
 
     if (
       currentCategory ===
       'pictograms'
     ) {
+
       showNextHanzi()
+
       return
     }
+
 
     if (
       currentCategory ===
       'tones'
     ) {
+
       showNextTone()
+
       return
     }
+
 
     if (
       currentCategory ===
       'sentence'
     ) {
+
       showNextSentence(
         currentSentenceCategory
       )
+
     }
+
   }
 )
+
 
 initialiseSpeech()
 
