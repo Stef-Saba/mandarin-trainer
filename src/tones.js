@@ -165,11 +165,11 @@ function findToneVariants(item) {
 
 
 /*
- * Direct speech for tone comparison characters.
- *
- * This is known to work on the phone.
+ * This is the single speech function used
+ * by both the comparison buttons and the
+ * main Tone sound button.
  */
-function speakComparisonCharacter(character) {
+export function speakToneCharacter(character) {
 
   if (
     !character ||
@@ -194,34 +194,14 @@ function speakComparisonCharacter(character) {
 }
 
 
-/*
- * Direct speech for the main Tone character.
- *
- * This deliberately uses the exact same speech
- * approach as the working comparison buttons.
- */
 export function playCurrentToneSound() {
 
-  if (
-    !currentItem ||
-    !currentItem.character ||
-    !('speechSynthesis' in window)
-  ) {
+  if (!currentItem) {
     return
   }
 
-  const utterance =
-    new SpeechSynthesisUtterance(
-      currentItem.character
-    )
-
-  utterance.lang = 'zh-TW'
-  utterance.rate = 0.85
-  utterance.pitch = 1
-  utterance.volume = 1
-
-  window.speechSynthesis.speak(
-    utterance
+  speakToneCharacter(
+    currentItem.character
   )
 }
 
@@ -260,6 +240,9 @@ function renderComparison() {
   sentenceElement.classList.remove(
     'tone-choose-prompt'
   )
+
+  sentenceElement.style.fontSize = ''
+  sentenceElement.style.lineHeight = ''
 
   const comparison =
     document.createElement('div')
@@ -335,7 +318,7 @@ function renderComparison() {
 
         event.stopPropagation()
 
-        speakComparisonCharacter(
+        speakToneCharacter(
           item.character
         )
 
@@ -415,6 +398,9 @@ function renderToneCharacter(item) {
   sentenceElement.classList.remove(
     'tone-choose-prompt'
   )
+
+  sentenceElement.style.fontSize = ''
+  sentenceElement.style.lineHeight = ''
 
   sentenceElement.textContent =
     item.character
@@ -501,10 +487,21 @@ export async function openTonePractice() {
     'tone-choose-prompt'
   )
 
+  /*
+   * Explicitly override the large Hanzi
+   * font on the initial Tone screen.
+   */
+  sentenceElement.style.fontSize =
+    '34px'
+
+  sentenceElement.style.lineHeight =
+    '1.3'
+
   soundButton.style.display =
     'none'
 
   pinyinElement.textContent = ''
+
   translationElement.textContent = ''
 
   pinyinElement.style.display =
@@ -566,10 +563,14 @@ export function toggleToneComparison() {
     !comparisonVisible
 
   if (comparisonVisible) {
+
     renderComparison()
+
   } else {
+
     renderToneCharacter(
       currentItem
     )
+
   }
 }
