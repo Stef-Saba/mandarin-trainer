@@ -23,6 +23,7 @@ function getBasePinyin(pinyin) {
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/[0-9]/g, '')
     .trim()
+
 }
 
 
@@ -40,6 +41,7 @@ function getToneNumber(item) {
   }
 
   return null
+
 }
 
 
@@ -49,7 +51,9 @@ function getToneNumber(item) {
  * The comparison feature uses this list to avoid
  * showing obscure dictionary characters.
  */
+
 const commonCharacters = new Set(
+
   `
 我你他她它们的了不在有是人这那一个大中小上下来去
 好很也都和与要会能可以说看听吃喝做想知道觉得
@@ -97,7 +101,9 @@ const commonCharacters = new Set(
 语言中文英文
 学习生活
 `
-    .replace(/\s+/g, '')
+
+  .replace(/\s+/g, '')
+
 )
 
 
@@ -111,7 +117,6 @@ function findToneVariants(item) {
   }
 
   const allHanzi = getHanzi()
-
   const variants = []
 
   for (const candidate of allHanzi) {
@@ -152,6 +157,7 @@ function findToneVariants(item) {
     if (!alreadyExists) {
       variants.push(candidate)
     }
+
   }
 
   variants.sort(
@@ -161,14 +167,16 @@ function findToneVariants(item) {
   )
 
   return variants
+
 }
 
 
 /*
- * This is the single speech function used
- * by both the comparison buttons and the
- * main Tone sound button.
+ * Single speech function used by both:
+ * - comparison buttons
+ * - main Tone sound button
  */
+
 export function speakToneCharacter(character) {
 
   if (
@@ -177,6 +185,12 @@ export function speakToneCharacter(character) {
   ) {
     return
   }
+
+  const synth =
+    window.speechSynthesis
+
+  // Stop anything already queued or playing.
+  synth.cancel()
 
   const utterance =
     new SpeechSynthesisUtterance(
@@ -188,9 +202,8 @@ export function speakToneCharacter(character) {
   utterance.pitch = 1
   utterance.volume = 1
 
-  window.speechSynthesis.speak(
-    utterance
-  )
+  synth.speak(utterance)
+
 }
 
 
@@ -203,6 +216,7 @@ export function playCurrentToneSound() {
   speakToneCharacter(
     currentItem.character
   )
+
 }
 
 
@@ -367,12 +381,14 @@ function renderComparison() {
   wordDefinition.textContent = ''
 
   pictogramExplanation.textContent = ''
+
 }
 
 
 function renderToneCharacter(item) {
 
   currentItem = item
+
   comparisonVisible = false
 
   const sentenceElement =
@@ -423,6 +439,7 @@ function renderToneCharacter(item) {
 
   soundButton.style.display =
     'block'
+
 }
 
 
@@ -491,6 +508,7 @@ export async function openTonePractice() {
    * Explicitly override the large Hanzi
    * font on the initial Tone screen.
    */
+
   sentenceElement.style.fontSize =
     '34px'
 
@@ -509,6 +527,7 @@ export async function openTonePractice() {
 
   translationElement.style.display =
     'none'
+
 }
 
 
@@ -524,7 +543,9 @@ export function selectTone(tone) {
     )
 
   currentTone = tone
+
   currentIndex = 0
+
   comparisonVisible = false
 
   if (!toneItems.length) {
@@ -534,6 +555,7 @@ export function selectTone(tone) {
   renderToneCharacter(
     toneItems[currentIndex]
   )
+
 }
 
 
@@ -550,6 +572,7 @@ export function showNextTone() {
   renderToneCharacter(
     toneItems[currentIndex]
   )
+
 }
 
 
@@ -573,4 +596,5 @@ export function toggleToneComparison() {
     )
 
   }
+
 }
