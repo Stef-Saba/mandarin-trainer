@@ -3,10 +3,6 @@ import {
   loadHanzi
 } from './hanzi.js'
 
-import {
-  speakChinese
-} from './speech.js'
-
 let currentTone = null
 let toneItems = []
 let currentIndex = 0
@@ -28,9 +24,7 @@ function renderToneCharacter(item) {
     document.querySelector('#wordDefinition')
 
   const pictogramExplanation =
-    document.querySelector(
-      '#pictogramExplanation'
-    )
+    document.querySelector('#pictogramExplanation')
 
   sentenceElement.textContent =
     item.character
@@ -54,18 +48,6 @@ function renderToneCharacter(item) {
   soundButton.style.display =
     'block'
 
-  /*
-   * Tones gets its own direct sound handler.
-   * This avoids relying on the shared handler
-   * in main.js for mobile Tones practice.
-   */
-  soundButton.onclick = event => {
-    event.preventDefault()
-    event.stopPropagation()
-
-    speakChinese(item.character)
-  }
-
   window.dispatchEvent(
     new CustomEvent(
       'trainer:setSpeech',
@@ -81,12 +63,8 @@ function renderToneCharacter(item) {
 export async function openTonePractice() {
   await loadHanzi()
 
-  const allHanzi =
-    getHanzi()
-
-  toneItems = []
-
   currentTone = null
+  toneItems = []
   currentIndex = 0
 
   const toneSelection =
@@ -99,19 +77,10 @@ export async function openTonePractice() {
       '#normalButtons'
     )
 
-  toneSelection.style.display =
-    'flex'
-
-  normalButtons.style.display =
-    'flex'
-
   const nextButton =
     document.querySelector(
       '#nextButton'
     )
-
-  nextButton.textContent =
-    'Next Hanzi'
 
   const sentenceElement =
     document.querySelector(
@@ -133,6 +102,15 @@ export async function openTonePractice() {
       '#translation'
     )
 
+  toneSelection.style.display =
+    'flex'
+
+  normalButtons.style.display =
+    'flex'
+
+  nextButton.textContent =
+    'Next Hanzi'
+
   sentenceElement.textContent =
     'Choose a tone'
 
@@ -147,15 +125,6 @@ export async function openTonePractice() {
 
   translationElement.style.display =
     'none'
-
-  allHanzi.forEach(item => {
-    if (
-      Array.isArray(item.tones) &&
-      item.tones.length > 0
-    ) {
-      toneItems.push(item)
-    }
-  })
 }
 
 export function selectTone(tone) {

@@ -206,7 +206,7 @@ document.querySelector('#app').innerHTML = `
           class="sound-button"
           type="button"
           aria-label="Listen"
-          style="display:none;"
+          style="display:none; margin:16px auto;"
         >
           🔊
         </button>
@@ -221,6 +221,18 @@ document.querySelector('#app').innerHTML = `
         ></div>
 
       </section>
+
+      <div
+        class="answer"
+        id="pinyin"
+        style="display:none;"
+      ></div>
+
+      <div
+        class="answer"
+        id="translation"
+        style="display:none;"
+      ></div>
 
       <div
         id="normalButtons"
@@ -276,23 +288,6 @@ document.querySelector('#app').innerHTML = `
         >
           Tone 4
         </button>
-
-      </div>
-
-      <div
-        id="hiddenAnswers"
-        style="display:none;"
-      >
-
-        <div
-          class="answer"
-          id="pinyin"
-        ></div>
-
-        <div
-          class="answer"
-          id="translation"
-        ></div>
 
       </div>
 
@@ -525,6 +520,13 @@ backButton.addEventListener(
   showHome
 )
 
+/*
+ * ONE shared sound handler.
+ *
+ * Hanzi, Tones and Sentences all use
+ * the same button and speak whatever
+ * is currently displayed in #sentence.
+ */
 soundButton.onclick = () => {
   const text =
     sentenceElement.textContent.trim()
