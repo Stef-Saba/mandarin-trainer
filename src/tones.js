@@ -164,6 +164,11 @@ function findToneVariants(item) {
 }
 
 
+/*
+ * Direct speech for tone comparison characters.
+ *
+ * This is known to work on the phone.
+ */
 function speakComparisonCharacter(character) {
 
   if (
@@ -176,6 +181,38 @@ function speakComparisonCharacter(character) {
   const utterance =
     new SpeechSynthesisUtterance(
       character
+    )
+
+  utterance.lang = 'zh-TW'
+  utterance.rate = 0.85
+  utterance.pitch = 1
+  utterance.volume = 1
+
+  window.speechSynthesis.speak(
+    utterance
+  )
+}
+
+
+/*
+ * Direct speech for the main Tone character.
+ *
+ * This deliberately uses the exact same speech
+ * approach as the working comparison buttons.
+ */
+export function playCurrentToneSound() {
+
+  if (
+    !currentItem ||
+    !currentItem.character ||
+    !('speechSynthesis' in window)
+  ) {
+    return
+  }
+
+  const utterance =
+    new SpeechSynthesisUtterance(
+      currentItem.character
     )
 
   utterance.lang = 'zh-TW'
@@ -219,6 +256,10 @@ function renderComparison() {
     findToneVariants(currentItem)
 
   sentenceElement.innerHTML = ''
+
+  sentenceElement.classList.remove(
+    'tone-choose-prompt'
+  )
 
   const comparison =
     document.createElement('div')
@@ -371,6 +412,10 @@ function renderToneCharacter(item) {
       '#pictogramExplanation'
     )
 
+  sentenceElement.classList.remove(
+    'tone-choose-prompt'
+  )
+
   sentenceElement.textContent =
     item.character
 
@@ -392,17 +437,6 @@ function renderToneCharacter(item) {
 
   soundButton.style.display =
     'block'
-
-  window.dispatchEvent(
-    new CustomEvent(
-      'trainer:setSpeech',
-      {
-        detail: {
-          text: item.character
-        }
-      }
-    )
-  )
 }
 
 
@@ -462,6 +496,10 @@ export async function openTonePractice() {
 
   sentenceElement.textContent =
     'Choose a tone'
+
+  sentenceElement.classList.add(
+    'tone-choose-prompt'
+  )
 
   soundButton.style.display =
     'none'

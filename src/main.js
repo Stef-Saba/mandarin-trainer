@@ -2,55 +2,64 @@ import './style.css'
 
 import {
   initialiseSpeech,
-  speakChinese,
-  stopAudio
+  speakChinese
 } from './speech.js'
 
 import {
   loadHanzi,
   showRandomHanzi,
-  showNextHanzi
+  showNextHanzi,
+  revealPinyin,
+  revealTranslation
 } from './hanzi.js'
 
 import {
   openTonePractice,
   selectTone,
   showNextTone,
-  toggleToneComparison
+  toggleToneComparison,
+  playCurrentToneSound
 } from './tones.js'
 
 import {
-  openSentence,
+  openSentencePractice,
   showNextSentence
 } from './sentences.js'
 
 
-document.querySelector('#app').innerHTML = `
+const app =
+  document.querySelector('#app')
 
-  <main class="app">
 
-    <section id="homeScreen">
+let currentCategory = null
+
+
+app.innerHTML = `
+  <div class="app">
+
+    <section id="home">
 
       <h1>说说</h1>
 
       <p class="subtitle">
-        Choose what you want to practise.
+        Mandarin practice
       </p>
 
       <div class="categories">
 
         <button
           class="category"
-          data-category="pictograms"
+          data-category="hanzi"
         >
           <span class="category-title">
-            🀄 Hanzi
+            汉字 Hanzi
           </span>
 
           <span class="category-description">
-            Learn Chinese characters through their origins
+            Recognise characters
           </span>
         </button>
+
 
         <button
           class="category"
@@ -65,6 +74,7 @@ document.querySelector('#app').innerHTML = `
           </span>
         </button>
 
+
         <button
           class="category"
           data-category="sentences"
@@ -74,7 +84,7 @@ document.querySelector('#app').innerHTML = `
           </span>
 
           <span class="category-description">
-            Practise Mandarin in context
+            Read and understand Mandarin
           </span>
         </button>
 
@@ -84,137 +94,36 @@ document.querySelector('#app').innerHTML = `
 
 
     <section
-      id="sentenceFolderScreen"
-      style="display:none;"
+      id="trainer"
+      style="display: none;"
     >
 
       <button
-        class="back"
-        id="sentenceFolderBack"
-        type="button"
-      >
-        ← Home
-      </button>
-
-      <h1>💬 Sentences</h1>
-
-      <p class="subtitle">
-        Choose what you want to practise.
-      </p>
-
-      <div class="categories">
-
-        <button
-          class="category sentence-category"
-          data-sentence-category="beginner"
-          type="button"
-        >
-          <span class="category-title">
-            🌱 Beginner Mandarin
-          </span>
-
-          <span class="category-description">
-            Everyday sentences for getting started
-          </span>
-        </button>
-
-        <button
-          class="category sentence-category"
-          data-sentence-category="food"
-          type="button"
-        >
-          <span class="category-title">
-            🍜 Food & Restaurants
-          </span>
-
-          <span class="category-description">
-            Ordering, eating and talking about food
-          </span>
-        </button>
-
-        <button
-          class="category sentence-category"
-          data-sentence-category="travel"
-          type="button"
-        >
-          <span class="category-title">
-            ✈️ Travel
-          </span>
-
-          <span class="category-description">
-            Useful Mandarin for travelling
-          </span>
-        </button>
-
-        <button
-          class="category sentence-category"
-          data-sentence-category="business"
-          type="button"
-        >
-          <span class="category-title">
-            💼 Business Chinese
-          </span>
-
-          <span class="category-description">
-            Mandarin for work and professional situations
-          </span>
-        </button>
-
-        <button
-          class="category sentence-category"
-          data-sentence-category="everyday"
-          type="button"
-        >
-          <span class="category-title">
-            🗣️ Everyday Conversation
-          </span>
-
-          <span class="category-description">
-            Natural everyday Mandarin
-          </span>
-        </button>
-
-      </div>
-
-    </section>
-
-
-    <section
-      id="trainerScreen"
-      style="display:none;"
-    >
-
-      <button
-        class="back"
         id="backButton"
-        type="button"
+        class="back"
       >
-        ← Home
+        ← Back
       </button>
 
-      <h1 id="categoryTitle">
-        说说
-      </h1>
 
-
-      <section class="card">
+      <div class="card">
 
         <div
-          class="sentence"
           id="sentence"
+          class="sentence"
         >
-          Loading...
         </div>
 
 
-        <div class="tone-card-controls">
+        <div
+          class="tone-card-controls"
+        >
 
           <button
             id="soundButton"
             class="sound-button"
             type="button"
-            aria-label="Listen"
-            style="display:none;"
+            aria-label="Play sound"
           >
             🔊
           </button>
@@ -223,7 +132,7 @@ document.querySelector('#app').innerHTML = `
             id="compareTonesButton"
             class="compare-tones-button"
             type="button"
-            style="display:none;"
+            style="display: none;"
           >
             Compare tones
           </button>
@@ -232,119 +141,116 @@ document.querySelector('#app').innerHTML = `
 
 
         <div
-          class="answer"
           id="pinyin"
-          style="display:none;"
-        ></div>
+          class="answer"
+        >
+        </div>
 
 
         <div
-          class="answer"
           id="translation"
-          style="display:none;"
-        ></div>
+          class="answer"
+        >
+        </div>
 
 
         <div
           id="wordDefinition"
           class="word-definition"
-        ></div>
+        >
+        </div>
 
 
         <div
           id="pictogramExplanation"
-        ></div>
+          class="character-hint"
+        >
+        </div>
 
-      </section>
 
+        <div
+          id="normalButtons"
+          class="buttons"
+        >
 
-      <div
-        id="normalButtons"
-        class="buttons"
-      >
+          <button
+            id="pinyinButton"
+            type="button"
+          >
+            Pinyin
+          </button>
+
+          <button
+            id="translationButton"
+            type="button"
+          >
+            Translation
+          </button>
+
+        </div>
+
 
         <button
-          id="pinyinButton"
+          id="nextButton"
+          class="next"
           type="button"
         >
-          Pinyin
+          Next
         </button>
 
-        <button
-          id="translationButton"
-          type="button"
+
+        <div
+          id="toneSelection"
+          class="tone-buttons"
+          style="display: none;"
         >
-          Translation
-        </button>
 
-      </div>
+          <button
+            type="button"
+            data-tone="1"
+          >
+            Tone 1
+          </button>
 
+          <button
+            type="button"
+            data-tone="2"
+          >
+            Tone 2
+          </button>
 
-      <button
-        class="next"
-        id="nextButton"
-        type="button"
-      >
-        Next Hanzi
-      </button>
+          <button
+            type="button"
+            data-tone="3"
+          >
+            Tone 3
+          </button>
 
+          <button
+            type="button"
+            data-tone="4"
+          >
+            Tone 4
+          </button>
 
-      <div
-        id="toneSelection"
-        class="tone-buttons"
-        style="display:none;"
-      >
-
-        <button
-          type="button"
-          data-tone="1"
-        >
-          Tone 1
-        </button>
-
-        <button
-          type="button"
-          data-tone="2"
-        >
-          Tone 2
-        </button>
-
-        <button
-          type="button"
-          data-tone="3"
-        >
-          Tone 3
-        </button>
-
-        <button
-          type="button"
-          data-tone="4"
-        >
-          Tone 4
-        </button>
+        </div>
 
       </div>
 
     </section>
 
-  </main>
-
+  </div>
 `
 
 
-const homeScreen =
-  document.querySelector('#homeScreen')
+const home =
+  document.querySelector('#home')
 
-const sentenceFolderScreen =
-  document.querySelector(
-    '#sentenceFolderScreen'
-  )
+const trainer =
+  document.querySelector('#trainer')
 
-const trainerScreen =
-  document.querySelector('#trainerScreen')
-
-const categoryTitle =
-  document.querySelector('#categoryTitle')
+const backButton =
+  document.querySelector('#backButton')
 
 const sentenceElement =
   document.querySelector('#sentence')
@@ -357,22 +263,10 @@ const compareTonesButton =
     '#compareTonesButton'
   )
 
-const wordDefinition =
-  document.querySelector('#wordDefinition')
-
-const pinyinElement =
-  document.querySelector('#pinyin')
-
-const translationElement =
-  document.querySelector('#translation')
-
-const pictogramExplanation =
-  document.querySelector(
-    '#pictogramExplanation'
-  )
-
 const pinyinButton =
-  document.querySelector('#pinyinButton')
+  document.querySelector(
+    '#pinyinButton'
+  )
 
 const translationButton =
   document.querySelector(
@@ -380,176 +274,75 @@ const translationButton =
   )
 
 const nextButton =
-  document.querySelector('#nextButton')
-
-const toneSelection =
-  document.querySelector('#toneSelection')
+  document.querySelector(
+    '#nextButton'
+  )
 
 const normalButtons =
-  document.querySelector('#normalButtons')
-
-const sentenceFolderBack =
   document.querySelector(
-    '#sentenceFolderBack'
+    '#normalButtons'
   )
 
-const backButton =
-  document.querySelector('#backButton')
-
-
-let currentCategory = ''
-
-let currentSentenceCategory = ''
-
-
-const categoryNames = {
-
-  pictograms: '🀄 Hanzi',
-
-  tones: '🎵 Tones',
-
-  sentence: '💬 Sentences'
-
-}
-
-
-function resetTrainerDisplay() {
-
-  trainerScreen.classList.remove(
-    'hanzi-mode',
-    'tones-mode',
-    'sentence-mode'
+const toneSelection =
+  document.querySelector(
+    '#toneSelection'
   )
 
-  wordDefinition.textContent = ''
 
-  pinyinElement.textContent = ''
+async function openCategory(
+  category
+) {
 
-  translationElement.textContent = ''
+  currentCategory =
+    category
 
-  pictogramExplanation.textContent = ''
-
-  pinyinElement.style.display =
+  home.style.display =
     'none'
 
-  translationElement.style.display =
-    'none'
+  trainer.style.display =
+    'block'
 
-  soundButton.style.display =
-    'none'
+  document.body.className =
+    `${category}-mode`
 
   compareTonesButton.style.display =
     'none'
 
-  nextButton.style.display =
-    'block'
+  toneSelection.style.display =
+    'none'
 
   normalButtons.style.display =
     'flex'
 
-  toneSelection.style.display =
-    'none'
-}
 
-
-function showHome() {
-
-  stopAudio()
-
-  homeScreen.style.display =
-    'block'
-
-  sentenceFolderScreen.style.display =
-    'none'
-
-  trainerScreen.style.display =
-    'none'
-
-  currentCategory = ''
-
-}
-
-
-function showSentenceFolder() {
-
-  stopAudio()
-
-  homeScreen.style.display =
-    'none'
-
-  sentenceFolderScreen.style.display =
-    'block'
-
-  trainerScreen.style.display =
-    'none'
-
-}
-
-
-async function openCategory(category) {
-
-  stopAudio()
-
-  currentCategory = category
-
-  categoryTitle.textContent =
-    categoryNames[category]
-
-  homeScreen.style.display =
-    'none'
-
-  sentenceFolderScreen.style.display =
-    'none'
-
-  trainerScreen.style.display =
-    'block'
-
-  resetTrainerDisplay()
-
-
-  if (category === 'pictograms') {
-
-    trainerScreen.classList.add(
-      'hanzi-mode'
-    )
+  if (category === 'hanzi') {
 
     await loadHanzi()
+
+    showRandomHanzi()
 
     nextButton.textContent =
       'Next Hanzi'
 
-    showRandomHanzi()
-
-    return
   }
 
 
   if (category === 'tones') {
 
-    trainerScreen.classList.add(
-      'tones-mode'
-    )
-
-    await loadHanzi()
-
-    openTonePractice()
+    await openTonePractice()
 
     compareTonesButton.style.display =
-      'inline-block'
+      'block'
 
-    return
   }
 
 
-  if (category === 'sentence') {
+  if (category === 'sentences') {
 
-    trainerScreen.classList.add(
-      'sentence-mode'
-    )
+    await openSentencePractice()
 
-    await openSentence(
-      currentSentenceCategory
-    )
+    nextButton.textContent =
+      'Next Sentence'
 
   }
 
@@ -557,133 +350,72 @@ async function openCategory(category) {
 
 
 document
-  .querySelectorAll(
-    '#homeScreen .category'
-  )
+  .querySelectorAll('.category')
   .forEach(button => {
 
     button.addEventListener(
       'click',
       () => {
 
-        const category =
+        openCategory(
           button.dataset.category
-
-        if (
-          category === 'sentences'
-        ) {
-
-          showSentenceFolder()
-
-          return
-        }
-
-        openCategory(category)
+        )
 
       }
     )
 
   })
-
-
-document
-  .querySelectorAll(
-    '.sentence-category'
-  )
-  .forEach(button => {
-
-    button.addEventListener(
-      'click',
-      () => {
-
-        currentSentenceCategory =
-          button.dataset.sentenceCategory
-
-        openCategory('sentence')
-
-      }
-    )
-
-  })
-
-
-sentenceFolderBack.addEventListener(
-  'click',
-  showHome
-)
 
 
 backButton.addEventListener(
   'click',
-  showHome
+  () => {
+
+    currentCategory =
+      null
+
+    trainer.style.display =
+      'none'
+
+    home.style.display =
+      'block'
+
+    document.body.className = ''
+
+  }
 )
 
 
 soundButton.onclick = () => {
 
+  if (
+    currentCategory === 'tones'
+  ) {
+
+    playCurrentToneSound()
+
+    return
+  }
+
+
   const text =
     sentenceElement.textContent.trim()
 
-  if (!text) {
-    return
+
+  if (text) {
+
+    speakChinese(text)
+
   }
-
-
-  /*
-   * Hanzi and sentences continue to use
-   * the shared speech function.
-   *
-   * Tone practice uses the same direct
-   * speech approach as the comparison
-   * buttons, which is already confirmed
-   * to work on the phone.
-   */
-
-  if (
-    currentCategory === 'tones' &&
-    'speechSynthesis' in window
-  ) {
-
-
-    const utterance =
-      new SpeechSynthesisUtterance(
-        text
-      )
-
-    utterance.lang = 'zh-TW'
-    utterance.rate = 0.85
-    utterance.pitch = 1
-    utterance.volume = 1
-
-    window.speechSynthesis.speak(
-      utterance
-    )
-
-    return
-  }
-
-
-  speakChinese(text)
 
 }
-
-
-compareTonesButton.addEventListener(
-  'click',
-  () => {
-
-    toggleToneComparison()
-
-  }
-)
 
 
 pinyinButton.addEventListener(
   'click',
   () => {
 
-    pinyinElement.style.display =
-      'block'
+    revealPinyin()
 
   }
 )
@@ -693,16 +425,51 @@ translationButton.addEventListener(
   'click',
   () => {
 
-    translationElement.style.display =
-      'block'
+    revealTranslation()
 
   }
 )
 
 
-toneSelection
+nextButton.addEventListener(
+  'click',
+  () => {
+
+    if (
+      currentCategory === 'hanzi'
+    ) {
+
+      showNextHanzi()
+
+      return
+    }
+
+
+    if (
+      currentCategory === 'tones'
+    ) {
+
+      showNextTone()
+
+      return
+    }
+
+
+    if (
+      currentCategory === 'sentences'
+    ) {
+
+      showNextSentence()
+
+    }
+
+  }
+)
+
+
+document
   .querySelectorAll(
-    '[data-tone]'
+    '#toneSelection button'
   )
   .forEach(button => {
 
@@ -722,49 +489,14 @@ toneSelection
   })
 
 
-nextButton.addEventListener(
+compareTonesButton.addEventListener(
   'click',
   () => {
 
-    stopAudio()
-
-    if (
-      currentCategory ===
-      'pictograms'
-    ) {
-
-      showNextHanzi()
-
-      return
-    }
-
-
-    if (
-      currentCategory ===
-      'tones'
-    ) {
-
-      showNextTone()
-
-      return
-    }
-
-
-    if (
-      currentCategory ===
-      'sentence'
-    ) {
-
-      showNextSentence(
-        currentSentenceCategory
-      )
-
-    }
+    toggleToneComparison()
 
   }
 )
 
 
 initialiseSpeech()
-
-showHome()
