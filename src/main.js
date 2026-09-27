@@ -624,11 +624,47 @@ soundButton.onclick = () => {
   const text =
     sentenceElement.textContent.trim()
 
-  if (text) {
-
-    speakChinese(text)
-
+  if (!text) {
+    return
   }
+
+
+  /*
+   * Hanzi and sentences continue to use
+   * the shared speech function.
+   *
+   * Tone practice uses the same direct
+   * speech approach as the comparison
+   * buttons, which is already confirmed
+   * to work on the phone.
+   */
+
+  if (
+    currentCategory === 'tones' &&
+    'speechSynthesis' in window
+  ) {
+
+    window.speechSynthesis.cancel()
+
+    const utterance =
+      new SpeechSynthesisUtterance(
+        text
+      )
+
+    utterance.lang = 'zh-TW'
+    utterance.rate = 0.85
+    utterance.pitch = 1
+    utterance.volume = 1
+
+    window.speechSynthesis.speak(
+      utterance
+    )
+
+    return
+  }
+
+
+  speakChinese(text)
 
 }
 
